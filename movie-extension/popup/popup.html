@@ -3,180 +3,177 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Movie Recommendations</title>
+  <title>Movie Buddy</title>
   <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="popup-container">
+  <div class="app">
     <!-- Header -->
-    <div class="popup-header">
-      <h1 class="popup-title">🎬 Movie Buddy</h1>
-      <button id="settings-btn" class="settings-btn" title="Settings">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="1"></circle>
-          <circle cx="19" cy="12" r="1"></circle>
-          <circle cx="5" cy="12" r="1"></circle>
+    <header class="header">
+      <div class="header-brand">
+        <svg class="header-logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+          <line x1="7" y1="2" x2="7" y2="22"></line>
+          <line x1="17" y1="2" x2="17" y2="22"></line>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+        </svg>
+        <h1 class="header-title">Movie Buddy</h1>
+      </div>
+      <button id="settings-btn" class="icon-btn" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
       </button>
-    </div>
+    </header>
 
-    <!-- Tabs Navigation -->
-    <div class="tabs-nav">
-      <button class="tab-btn active" data-tab="dashboard" id="tab-dashboard">Dashboard</button>
-      <button class="tab-btn" data-tab="history" id="tab-history">History</button>
-      <button class="tab-btn" data-tab="bookmarks" id="tab-bookmarks">Bookmarks</button>
-    </div>
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="dashboard" id="tab-dashboard">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        Dashboard
+      </button>
+      <button class="tab" data-tab="history" id="tab-history">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        History
+      </button>
+      <button class="tab" data-tab="bookmarks" id="tab-bookmarks">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Saved
+      </button>
+    </nav>
 
-    <!-- Tab Content -->
-    <div class="tabs-content">
-      <!-- Dashboard Tab -->
-      <div class="tab-content active" id="tab-content-dashboard">
-        <div class="profile-section">
-          <h2>Your Profile</h2>
-          <div class="profile-stats">
-            <div class="stat-item">
-              <span class="stat-label">Movies Watched</span>
-              <span class="stat-value" id="stat-watches">0</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Bookmarks</span>
-              <span class="stat-value" id="stat-bookmarks">0</span>
-            </div>
+    <!-- Content -->
+    <main class="content">
+      <!-- Dashboard -->
+      <section class="tab-content active" id="tab-content-dashboard">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon">🎬</div>
+            <div class="stat-value" id="stat-watches">0</div>
+            <div class="stat-label">Watched</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔖</div>
+            <div class="stat-value" id="stat-bookmarks">0</div>
+            <div class="stat-label">Saved</div>
           </div>
         </div>
 
-        <div class="genres-section">
-          <h3>Your Favorite Genres</h3>
-          <div class="genres-list" id="genres-list">
-            <span class="genre-tag">Loading...</span>
+        <div class="section-card">
+          <h3 class="section-title">Top Genres</h3>
+          <div class="genres" id="genres-list">
+            <span class="genre-pill">Loading...</span>
           </div>
         </div>
 
-        <div class="current-movie-section">
-          <h3>Current Movie</h3>
+        <div class="section-card">
+          <h3 class="section-title">Last Watched</h3>
           <div id="current-movie-info" class="current-movie-info">
-            <p class="empty-message">Not on a movie page</p>
+            <p class="muted-text">No movies tracked yet</p>
           </div>
         </div>
 
-        <div class="action-buttons">
-          <button id="show-recommendations-btn" class="btn btn-primary">
-            Show Recommendations
-          </button>
-        </div>
-      </div>
+        <button id="show-recommendations-btn" class="primary-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          Show Recommendations
+        </button>
+      </section>
 
-      <!-- History Tab -->
-      <div class="tab-content" id="tab-content-history">
-        <div class="history-section">
-          <h2>Watch History</h2>
-          <div id="history-list" class="list-container">
-            <p class="empty-message">No history yet</p>
+      <!-- History -->
+      <section class="tab-content" id="tab-content-history">
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">Watch History</h3>
+            <button id="clear-history-btn" class="ghost-btn small">Clear</button>
           </div>
-          <button id="clear-history-btn" class="btn btn-secondary btn-small">
-            Clear History
-          </button>
-        </div>
-      </div>
-
-      <!-- Bookmarks Tab -->
-      <div class="tab-content" id="tab-content-bookmarks">
-        <div class="bookmarks-section">
-          <h2>Saved Movies</h2>
-          <div id="bookmarks-list" class="list-container">
-            <p class="empty-message">No bookmarks yet</p>
+          <div id="history-list" class="list">
+            <p class="muted-text">No history yet</p>
           </div>
-          <button id="clear-bookmarks-btn" class="btn btn-secondary btn-small">
-            Clear Bookmarks
-          </button>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- Settings Panel (Hidden by default) -->
-    <div id="settings-panel" class="settings-panel hidden">
-      <div class="settings-content">
-        <div class="settings-header">
+      <!-- Bookmarks -->
+      <section class="tab-content" id="tab-content-bookmarks">
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title">Saved Movies</h3>
+            <button id="clear-bookmarks-btn" class="ghost-btn small">Clear</button>
+          </div>
+          <div id="bookmarks-list" class="list">
+            <p class="muted-text">No bookmarks yet</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="settings-overlay hidden">
+      <div class="settings-modal">
+        <div class="settings-head">
           <h2>Settings</h2>
-          <button class="close-settings-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="close-settings-btn icon-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </div>
-
         <div class="settings-body">
-          <div class="setting-item">
-            <label class="setting-label">
-              <input type="checkbox" id="extension-enabled" class="setting-input">
-              <span>Enable Extension</span>
-            </label>
+          <label class="toggle-row">
+            <span>Enable Extension</span>
+            <input type="checkbox" id="extension-enabled" class="toggle-input">
+          </label>
+          <label class="toggle-row">
+            <span>Auto Track Movies</span>
+            <input type="checkbox" id="auto-track" class="toggle-input">
+          </label>
+          <label class="toggle-row">
+            <span>Show Notifications</span>
+            <input type="checkbox" id="show-notifications" class="toggle-input">
+          </label>
+          <label class="number-row">
+            <span>Max History Items</span>
+            <input type="number" id="max-history" class="num-input" min="5" max="100" value="20">
+          </label>
+          <label class="number-row">
+            <span>Recommendations Count</span>
+            <input type="number" id="recommendation-count" class="num-input" min="3" max="12" value="6">
+          </label>
+
+          <hr class="divider">
+
+          <h4 class="settings-section-title">Data</h4>
+          <div class="settings-actions">
+            <button id="export-data-btn" class="outline-btn">Export Data</button>
+            <button id="clear-cache-btn" class="outline-btn">Clear Cache</button>
+            <button id="reset-all-btn" class="danger-btn">Reset All Data</button>
           </div>
 
-          <div class="setting-item">
-            <label class="setting-label">
-              <input type="checkbox" id="auto-track" class="setting-input">
-              <span>Auto Track Movies</span>
-            </label>
-          </div>
-
-          <div class="setting-item">
-            <label class="setting-label">
-              <input type="checkbox" id="show-notifications" class="setting-input">
-              <span>Show Notifications</span>
-            </label>
-          </div>
-
-          <div class="setting-item">
-            <label class="setting-label">
-              Max History Items:
-              <input type="number" id="max-history" class="setting-input" min="5" max="100" value="20">
-            </label>
-          </div>
-
-          <div class="setting-item">
-            <label class="setting-label">
-              Recommendations to Show:
-              <input type="number" id="recommendation-count" class="setting-input" min="3" max="12" value="6">
-            </label>
-          </div>
-
-          <hr class="settings-divider">
-
-          <div class="setting-item">
-            <h3>Data Management</h3>
-          </div>
-
-          <button id="export-data-btn" class="btn btn-secondary">
-            Export Data
-          </button>
-
-          <button id="clear-cache-btn" class="btn btn-secondary">
-            Clear Cache
-          </button>
-
-          <button id="reset-all-btn" class="btn btn-danger">
-            Reset All Data
-          </button>
-
-          <div class="settings-footer">
-            <p class="footer-text">Extension Version: 1.0.0</p>
-            <p class="footer-text">© 2024 Movie Buddy</p>
-          </div>
+          <div class="version-info">v1.0.0 · Movie Buddy</div>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
-    <div class="popup-footer">
-      <p class="footer-text">
-        💡 Tip: Press <kbd>Alt</kbd> + <kbd>R</kbd> to toggle recommendations
-      </p>
-    </div>
+    <footer class="footer">
+      <kbd>Alt</kbd> + <kbd>R</kbd> toggle recommendations on page
+    </footer>
   </div>
 
-  <!-- Scripts -->
   <script src="../utils/cache.js"></script>
   <script src="../utils/api.js"></script>
   <script src="../utils/storage.js"></script>
