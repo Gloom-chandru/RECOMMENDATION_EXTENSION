@@ -149,7 +149,7 @@ async function loadDashboard() {
         </div>
       `;
     } else {
-      currentMovieInfo.innerHTML = '<p class="empty-message">Not on a movie page</p>';
+      currentMovieInfo.innerHTML = '<p class="muted-text">Not on a movie page</p>';
     }
   } catch (error) {
     console.error('[Popup] Error loading dashboard:', error);
@@ -165,7 +165,7 @@ async function loadHistory() {
     const historyList = document.getElementById('history-list');
 
     if (history.length === 0) {
-      historyList.innerHTML = '<p class="empty-message">No history yet</p>';
+      historyList.innerHTML = '<p class="muted-text">No history yet</p>';
       return;
     }
 
@@ -208,7 +208,7 @@ async function loadBookmarks() {
     const bookmarksList = document.getElementById('bookmarks-list');
 
     if (bookmarks.length === 0) {
-      bookmarksList.innerHTML = '<p class="empty-message">No bookmarks yet</p>';
+      bookmarksList.innerHTML = '<p class="muted-text">No bookmarks yet</p>';
       return;
     }
 
