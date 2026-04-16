@@ -1,11 +1,12 @@
 /**
- * Popup Script
- * Handles UI interactions and data display
+ * Popup Script — v2.0
+ * Handles UI interactions, data display, and animations
  */
 
 // DOM Elements
 const tabButtons = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.tab-content');
+const tabIndicator = document.getElementById('tab-indicator');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const closeSettingsBtn = document.querySelector('.close-settings-btn');
@@ -27,6 +28,9 @@ async function init() {
     // Initialize storage
     await Storage.init();
 
+    // Set up tab indicator position
+    updateTabIndicator();
+
     // Load initial data
     await loadDashboard();
     await loadHistory();
@@ -39,6 +43,26 @@ async function init() {
     console.log('[Popup] Ready');
   } catch (error) {
     console.error('[Popup] Initialization error:', error);
+  }
+}
+
+/**
+ * Update the animated tab indicator position
+ */
+function updateTabIndicator() {
+  if (!tabIndicator) return;
+
+  const activeTab = document.querySelector('.tab.active');
+  if (!activeTab) return;
+
+  const tabTrack = activeTab.parentElement;
+  const tabs = Array.from(tabTrack.querySelectorAll('.tab'));
+  const activeIndex = tabs.indexOf(activeTab);
+
+  if (activeIndex >= 0) {
+    // Calculate position based on which tab is active
+    const translateX = activeIndex * 100;
+    tabIndicator.style.transform = `translateX(${translateX}%)`;
   }
 }
 
@@ -100,7 +124,7 @@ function attachEventListeners() {
 }
 
 /**
- * Switch between tabs
+ * Switch between tabs with animated indicator
  * @param {string} tabName
  */
 function switchTab(tabName) {
@@ -109,9 +133,20 @@ function switchTab(tabName) {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
 
-  // Update content
+  // Move indicator
+  updateTabIndicator();
+
+  // Update content with staggered animation
   tabContents.forEach(content => {
-    content.classList.toggle('active', content.id === `tab-content-${tabName}`);
+    const isTarget = content.id === `tab-content-${tabName}`;
+    if (isTarget) {
+      content.classList.add('active');
+      content.style.animation = 'none';
+      content.offsetHeight; // Force reflow
+      content.style.animation = '';
+    } else {
+      content.classList.remove('active');
+    }
   });
 }
 
@@ -122,19 +157,19 @@ async function loadDashboard() {
   try {
     const profile = await Storage.getProfileSummary();
     const history = await Storage.getHistory();
-    
-    // Update stats
-    document.getElementById('stat-watches').textContent = profile.historyCount;
-    document.getElementById('stat-bookmarks').textContent = profile.bookmarkCount;
+
+    // Animate stat counters
+    animateCounter('stat-watches', profile.historyCount);
+    animateCounter('stat-bookmarks', profile.bookmarkCount);
 
     // Update genres
     const genresContainer = document.getElementById('genres-list');
     if (profile.topGenres.length > 0) {
       genresContainer.innerHTML = profile.topGenres
-        .map(genre => `<span class="genre-pill">${escapeHtml(genre)}</span>`)
+        .map((genre, i) => `<span class="genre-pill" style="animation-delay:${i * 50}ms">${escapeHtml(genre)}</span>`)
         .join('');
     } else {
-      genresContainer.innerHTML = '<span class="genre-pill">No data yet</span>';
+      genresContainer.innerHTML = '<span class="genre-pill placeholder">No data yet</span>';
     }
 
     // Update current movie
@@ -142,18 +177,65 @@ async function loadDashboard() {
     if (history.length > 0) {
       const lastMovie = history[0];
       const date = new Date(lastMovie.timestamp);
+      const platformIcon = getPlatformIcon(lastMovie.platform);
       currentMovieInfo.innerHTML = `
         <div class="current-movie-title">${escapeHtml(lastMovie.title)}</div>
         <div class="current-movie-platform">
-          On ${escapeHtml(lastMovie.platform)} • ${formatDate(date)}
+          ${platformIcon} ${escapeHtml(lastMovie.platform || 'Unknown')} · ${formatDate(date)}
         </div>
       `;
     } else {
-      currentMovieInfo.innerHTML = '<p class="muted-text">Not on a movie page</p>';
+      currentMovieInfo.innerHTML = '<p class="muted-text">Browse a movie to start tracking</p>';
     }
   } catch (error) {
     console.error('[Popup] Error loading dashboard:', error);
   }
+}
+
+/**
+ * Animate a stat counter from 0 to target
+ * @param {string} elementId
+ * @param {number} target
+ */
+function animateCounter(elementId, target) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  if (target === 0) {
+    el.textContent = '0';
+    return;
+  }
+
+  const duration = 600;
+  const start = performance.now();
+
+  function tick(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    // Ease out cubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target);
+
+    if (progress < 1) {
+      requestAnimationFrame(tick);
+    }
+  }
+
+  requestAnimationFrame(tick);
+}
+
+/**
+ * Get platform emoji icon
+ * @param {string} platform
+ * @returns {string}
+ */
+function getPlatformIcon(platform) {
+  const icons = {
+    hotstar: '🟢',
+    primevideo: '🔵',
+    unknown: '🎬'
+  };
+  return icons[platform] || icons.unknown;
 }
 
 /**
@@ -165,21 +247,31 @@ async function loadHistory() {
     const historyList = document.getElementById('history-list');
 
     if (history.length === 0) {
-      historyList.innerHTML = '<p class="muted-text">No history yet</p>';
+      historyList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <p>No history yet</p>
+          <small>Movies you browse will appear here</small>
+        </div>
+      `;
       return;
     }
 
     historyList.innerHTML = history
       .map((movie, index) => {
         const date = new Date(movie.timestamp);
+        const platformIcon = getPlatformIcon(movie.platform);
         return `
-          <div class="list-item">
-            <div>
+          <div class="list-item" style="animation: listItemIn 0.3s ease-out ${index * 30}ms both">
+            <div class="list-item-content">
               <div class="list-item-title">${escapeHtml(movie.title)}</div>
-              <div class="list-item-meta">${movie.platform} • ${formatDate(date)}</div>
+              <div class="list-item-meta">${platformIcon} ${escapeHtml(movie.platform || 'Unknown')} · ${formatDate(date)}</div>
             </div>
-            <button class="list-item-remove" data-index="${index}" title="Remove">
-              ✕
+            <button class="list-item-remove" data-index="${index}" title="Remove" aria-label="Remove ${escapeHtml(movie.title)}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </div>
         `;
@@ -187,11 +279,19 @@ async function loadHistory() {
       .join('');
 
     // Attach remove listeners
-    document.querySelectorAll('.list-item-remove').forEach(btn => {
+    document.querySelectorAll('#history-list .list-item-remove').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const index = parseInt(e.target.dataset.index);
-        await removeFromHistory(index);
-        await loadHistory();
+        const target = e.target.closest('.list-item-remove');
+        const index = parseInt(target.dataset.index);
+        // Animate removal
+        const item = target.closest('.list-item');
+        item.style.transition = 'all 0.25s ease-out';
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(20px)';
+        setTimeout(async () => {
+          await removeFromHistory(index);
+          await loadHistory();
+        }, 250);
       });
     });
   } catch (error) {
@@ -208,21 +308,31 @@ async function loadBookmarks() {
     const bookmarksList = document.getElementById('bookmarks-list');
 
     if (bookmarks.length === 0) {
-      bookmarksList.innerHTML = '<p class="muted-text">No bookmarks yet</p>';
+      bookmarksList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔖</div>
+          <p>No bookmarks yet</p>
+          <small>Save movies from recommendations to watch later</small>
+        </div>
+      `;
       return;
     }
 
     bookmarksList.innerHTML = bookmarks
       .map((movie, index) => {
         const date = new Date(movie.timestamp);
+        const rating = movie.rating ? movie.rating.toFixed(1) : '—';
         return `
-          <div class="list-item">
-            <div>
+          <div class="list-item" style="animation: listItemIn 0.3s ease-out ${index * 30}ms both">
+            <div class="list-item-content">
               <div class="list-item-title">${escapeHtml(movie.title)}</div>
-              <div class="list-item-meta">⭐ ${movie.rating.toFixed(1)} • ${formatDate(date)}</div>
+              <div class="list-item-meta">⭐ ${rating} · ${formatDate(date)}</div>
             </div>
-            <button class="list-item-remove" data-movie-id="${movie.id}" title="Remove">
-              ✕
+            <button class="list-item-remove" data-movie-id="${movie.id}" title="Remove" aria-label="Remove ${escapeHtml(movie.title)}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
           </div>
         `;
@@ -234,8 +344,15 @@ async function loadBookmarks() {
       btn.addEventListener('click', async (e) => {
         const target = e.target.closest('.list-item-remove');
         const movieId = parseInt(target.dataset.movieId);
-        await Storage.removeBookmark(movieId);
-        await loadBookmarks();
+        const item = target.closest('.list-item');
+        item.style.transition = 'all 0.25s ease-out';
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(20px)';
+        setTimeout(async () => {
+          await Storage.removeBookmark(movieId);
+          await loadBookmarks();
+          await loadDashboard();
+        }, 250);
       });
     });
   } catch (error) {
@@ -266,23 +383,25 @@ async function loadSettings() {
 async function showRecommendations() {
   try {
     showRecommendationsBtn.disabled = true;
-    showRecommendationsBtn.textContent = 'Loading...';
+    const label = showRecommendationsBtn.querySelector('.cta-label');
+    if (label) label.textContent = 'Loading...';
 
     // Send message to content script to show overlay
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
+
     chrome.tabs.sendMessage(tab.id, { action: 'showRecommendations' }, (response) => {
       showRecommendationsBtn.disabled = false;
-      showRecommendationsBtn.textContent = 'Show Recommendations';
+      if (label) label.textContent = 'Get Recommendations';
 
       if (!response || response.error) {
-        alert('Unable to show recommendations on this page');
+        showToast('Unable to show recommendations on this page', 'warning');
       }
     });
   } catch (error) {
     console.error('[Popup] Error showing recommendations:', error);
     showRecommendationsBtn.disabled = false;
-    showRecommendationsBtn.textContent = 'Show Recommendations';
+    const label = showRecommendationsBtn.querySelector('.cta-label');
+    if (label) label.textContent = 'Get Recommendations';
   }
 }
 
@@ -302,9 +421,10 @@ async function clearHistory() {
 
     await loadHistory();
     await loadDashboard();
+    showToast('History cleared', 'success');
   } catch (error) {
     console.error('[Popup] Error clearing history:', error);
-    alert('Error clearing history');
+    showToast('Error clearing history', 'error');
   }
 }
 
@@ -323,9 +443,10 @@ async function clearBookmarks() {
 
     await loadBookmarks();
     await loadDashboard();
+    showToast('Bookmarks cleared', 'success');
   } catch (error) {
     console.error('[Popup] Error clearing bookmarks:', error);
-    alert('Error clearing bookmarks');
+    showToast('Error clearing bookmarks', 'error');
   }
 }
 
@@ -339,7 +460,12 @@ async function resetAllData() {
 
   try {
     resetAllBtn.disabled = true;
-    resetAllBtn.textContent = 'Resetting...';
+    resetAllBtn.innerHTML = `
+      <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+      </svg>
+      Resetting...
+    `;
 
     await chrome.storage.local.clear();
     await Storage.init();
@@ -350,12 +476,18 @@ async function resetAllData() {
     await loadSettings();
 
     resetAllBtn.disabled = false;
-    resetAllBtn.textContent = 'Reset All Data';
+    resetAllBtn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+      Reset All Data
+    `;
 
-    alert('All data has been reset');
+    showToast('All data has been reset', 'success');
   } catch (error) {
     console.error('[Popup] Error resetting data:', error);
-    alert('Error resetting data');
+    showToast('Error resetting data', 'error');
     resetAllBtn.disabled = false;
     resetAllBtn.textContent = 'Reset All Data';
   }
@@ -367,7 +499,13 @@ async function resetAllData() {
 async function exportData() {
   try {
     exportDataBtn.disabled = true;
-    exportDataBtn.textContent = 'Exporting...';
+    const originalHTML = exportDataBtn.innerHTML;
+    exportDataBtn.innerHTML = `
+      <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+      </svg>
+      Exporting...
+    `;
 
     const backup = await Storage.exportData();
 
@@ -380,15 +518,15 @@ async function exportData() {
       link.download = `movie-buddy-backup-${new Date().toISOString().split('T')[0]}.json`;
       link.click();
       URL.revokeObjectURL(url);
+      showToast('Data exported successfully', 'success');
     }
 
     exportDataBtn.disabled = false;
-    exportDataBtn.textContent = 'Export Data';
+    exportDataBtn.innerHTML = originalHTML;
   } catch (error) {
     console.error('[Popup] Error exporting data:', error);
-    alert('Error exporting data');
+    showToast('Error exporting data', 'error');
     exportDataBtn.disabled = false;
-    exportDataBtn.textContent = 'Export Data';
   }
 }
 
@@ -398,19 +536,23 @@ async function exportData() {
 async function clearCache() {
   try {
     clearCacheBtn.disabled = true;
-    clearCacheBtn.textContent = 'Clearing...';
+    const originalHTML = clearCacheBtn.innerHTML;
+    clearCacheBtn.innerHTML = `
+      <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+      </svg>
+      Clearing...
+    `;
 
     await Cache.clearAll();
 
     clearCacheBtn.disabled = false;
-    clearCacheBtn.textContent = 'Clear Cache';
-
-    alert('Cache cleared successfully');
+    clearCacheBtn.innerHTML = originalHTML;
+    showToast('Cache cleared', 'success');
   } catch (error) {
     console.error('[Popup] Error clearing cache:', error);
-    alert('Error clearing cache');
+    showToast('Error clearing cache', 'error');
     clearCacheBtn.disabled = false;
-    clearCacheBtn.textContent = 'Clear Cache';
   }
 }
 
@@ -431,6 +573,117 @@ async function removeFromHistory(index) {
 }
 
 /**
+ * Show a toast notification
+ * @param {string} message
+ * @param {string} type - 'success', 'error', 'warning'
+ */
+function showToast(message, type = 'success') {
+  // Remove existing toast
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const icons = {
+    success: '✓',
+    error: '✕',
+    warning: '!'
+  };
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[type] || '✓'}</span>
+    <span class="toast-message">${escapeHtml(message)}</span>
+  `;
+
+  // Inject toast styles if not already present
+  if (!document.getElementById('toast-styles')) {
+    const style = document.createElement('style');
+    style.id = 'toast-styles';
+    style.textContent = `
+      .toast {
+        position: fixed;
+        bottom: 50px;
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 200;
+        animation: toastIn 0.3s ease-out forwards;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        font-family: inherit;
+        white-space: nowrap;
+      }
+      .toast-success {
+        background: rgba(16, 185, 129, 0.9);
+        color: #fff;
+      }
+      .toast-error {
+        background: rgba(239, 68, 68, 0.9);
+        color: #fff;
+      }
+      .toast-warning {
+        background: rgba(245, 158, 11, 0.9);
+        color: #fff;
+      }
+      .toast-icon {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        flex-shrink: 0;
+      }
+      @keyframes toastIn {
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+      @keyframes listItemIn {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      .spin {
+        animation: spinAnim 0.8s linear infinite;
+      }
+      @keyframes spinAnim {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .empty-state {
+        text-align: center;
+        padding: 28px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+      .empty-icon { font-size: 28px; margin-bottom: 4px; }
+      .empty-state p { color: rgba(255,255,255,0.45); font-size: 13px; font-weight: 500; margin: 0; }
+      .empty-state small { color: rgba(255,255,255,0.25); font-size: 11px; }
+      .list-item-content { min-width: 0; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(toast);
+
+  // Auto-remove after 2.5s
+  setTimeout(() => {
+    toast.style.transition = 'all 0.25s ease-out';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(10px)';
+    setTimeout(() => toast.remove(), 250);
+  }, 2500);
+}
+
+/**
  * Escape HTML
  * @param {string} text
  * @returns {string}
@@ -442,14 +695,14 @@ function escapeHtml(text) {
 }
 
 /**
- * Format date
+ * Format date to relative time
  * @param {Date} date
  * @returns {string}
  */
 function formatDate(date) {
   const now = new Date();
   const diff = now - date;
-  
+
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
