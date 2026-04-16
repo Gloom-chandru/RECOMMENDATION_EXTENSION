@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Cross-Platform Movie Recommendation",
+  "version": "1.0.0",
+  "description": "Track your movie browsing and get personalized recommendations across streaming platforms",
+  "author": "Senior Full-Stack Developer",
+  
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  
+  "host_permissions": [
+    "https://www.hotstar.com/*",
+    "https://www.primevideo.com/*",
+    "https://api.themoviedb.org/*"
+  ],
+  
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Movie Recommendations"
+  },
+  
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["https://www.hotstar.com/*"],
+      "js": ["content/content.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://www.primevideo.com/*"],
+      "js": ["content/content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  }
+}
