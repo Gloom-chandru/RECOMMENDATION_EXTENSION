@@ -4,9 +4,9 @@
  */
 
 // DOM Elements
-const tabButtons = document.querySelectorAll('.tab-btn');
+const tabButtons = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.tab-content');
-const settingsBtn = document.querySelector('.settings-btn');
+const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const closeSettingsBtn = document.querySelector('.close-settings-btn');
 
@@ -131,10 +131,10 @@ async function loadDashboard() {
     const genresContainer = document.getElementById('genres-list');
     if (profile.topGenres.length > 0) {
       genresContainer.innerHTML = profile.topGenres
-        .map(genre => `<span class="genre-tag">${escapeHtml(genre)}</span>`)
+        .map(genre => `<span class="genre-pill">${escapeHtml(genre)}</span>`)
         .join('');
     } else {
-      genresContainer.innerHTML = '<span class="genre-tag">No data yet</span>';
+      genresContainer.innerHTML = '<span class="genre-pill">No data yet</span>';
     }
 
     // Update current movie
