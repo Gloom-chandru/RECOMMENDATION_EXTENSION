@@ -9,95 +9,169 @@
 <body>
   <div class="app">
     <!-- Header -->
-    <header class="header">
-      <div class="header-brand">
-        <svg class="header-logo" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
-          <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-          <line x1="7" y1="2" x2="7" y2="22"></line>
-          <line x1="17" y1="2" x2="17" y2="22"></line>
-          <line x1="2" y1="12" x2="22" y2="12"></line>
-        </svg>
-        <h1 class="header-title">Movie Buddy</h1>
+    <header class="header" id="header">
+      <div class="header-left">
+        <div class="header-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="url(#logo-grad)" stroke-width="2.2">
+            <defs>
+              <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#a78bfa"/>
+                <stop offset="100%" stop-color="#818cf8"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+            <line x1="7" y1="2" x2="7" y2="22"></line>
+            <line x1="17" y1="2" x2="17" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+          </svg>
+        </div>
+        <div class="header-text">
+          <h1 class="header-title">Movie Buddy</h1>
+          <span class="header-subtitle">Personalized Picks</span>
+        </div>
       </div>
-      <button id="settings-btn" class="icon-btn" title="Settings">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Settings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"></circle>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
       </button>
     </header>
 
-    <!-- Tabs -->
-    <nav class="tabs">
-      <button class="tab active" data-tab="dashboard" id="tab-dashboard">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"></rect>
-          <rect x="14" y="3" width="7" height="7"></rect>
-          <rect x="14" y="14" width="7" height="7"></rect>
-          <rect x="3" y="14" width="7" height="7"></rect>
-        </svg>
-        Dashboard
-      </button>
-      <button class="tab" data-tab="history" id="tab-history">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="12 6 12 12 16 14"></polyline>
-        </svg>
-        History
-      </button>
-      <button class="tab" data-tab="bookmarks" id="tab-bookmarks">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-        </svg>
-        Saved
-      </button>
+    <!-- Tab Navigation -->
+    <nav class="tabs" id="tabs-nav">
+      <div class="tab-track">
+        <button class="tab active" data-tab="dashboard" id="tab-dashboard">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          </svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="tab" data-tab="history" id="tab-history">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>History</span>
+        </button>
+        <button class="tab" data-tab="bookmarks" id="tab-bookmarks">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Saved</span>
+        </button>
+        <div class="tab-indicator" id="tab-indicator"></div>
+      </div>
     </nav>
 
-    <!-- Content -->
-    <main class="content">
-      <!-- Dashboard -->
+    <!-- Content Area -->
+    <main class="content" id="main-content">
+      <!-- Dashboard Tab -->
       <section class="tab-content active" id="tab-content-dashboard">
+        <!-- Stats -->
         <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-icon">🎬</div>
-            <div class="stat-value" id="stat-watches">0</div>
-            <div class="stat-label">Watched</div>
+          <div class="stat-card" id="stat-card-watches">
+            <div class="stat-visual">
+              <div class="stat-icon-wrap watches">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                  <line x1="7" y1="2" x2="7" y2="22"></line>
+                  <line x1="17" y1="2" x2="17" y2="22"></line>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                </svg>
+              </div>
+            </div>
+            <div class="stat-data">
+              <div class="stat-value" id="stat-watches">0</div>
+              <div class="stat-label">Movies Watched</div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-icon">🔖</div>
-            <div class="stat-value" id="stat-bookmarks">0</div>
-            <div class="stat-label">Saved</div>
+          <div class="stat-card" id="stat-card-bookmarks">
+            <div class="stat-visual">
+              <div class="stat-icon-wrap saved">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="stat-data">
+              <div class="stat-value" id="stat-bookmarks">0</div>
+              <div class="stat-label">Saved</div>
+            </div>
           </div>
         </div>
 
-        <div class="section-card">
-          <h3 class="section-title">Top Genres</h3>
+        <!-- Top Genres -->
+        <div class="card" id="genres-card">
+          <div class="card-header">
+            <div class="card-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            </div>
+            <h3 class="card-title">Top Genres</h3>
+          </div>
           <div class="genres" id="genres-list">
-            <span class="genre-pill">Loading...</span>
+            <span class="genre-pill placeholder">No data yet</span>
           </div>
         </div>
 
-        <div class="section-card">
-          <h3 class="section-title">Last Watched</h3>
-          <div id="current-movie-info" class="current-movie-info">
+        <!-- Last Watched -->
+        <div class="card" id="last-watched-card">
+          <div class="card-header">
+            <div class="card-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <h3 class="card-title">Last Watched</h3>
+          </div>
+          <div id="current-movie-info" class="last-watched-info">
             <p class="muted-text">No movies tracked yet</p>
           </div>
         </div>
 
-        <button id="show-recommendations-btn" class="primary-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        <!-- CTA Button -->
+        <button id="show-recommendations-btn" class="cta-btn">
+          <div class="cta-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </div>
+          <div class="cta-text">
+            <span class="cta-label">Get Recommendations</span>
+            <span class="cta-hint">AI-powered picks based on your taste</span>
+          </div>
+          <svg class="cta-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
-          Show Recommendations
         </button>
       </section>
 
-      <!-- History -->
+      <!-- History Tab -->
       <section class="tab-content" id="tab-content-history">
-        <div class="section-card">
-          <div class="section-header">
-            <h3 class="section-title">Watch History</h3>
-            <button id="clear-history-btn" class="ghost-btn small">Clear</button>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <div class="card-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+              <h3 class="card-title">Watch History</h3>
+            </div>
+            <button id="clear-history-btn" class="ghost-btn" title="Clear history">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Clear</span>
+            </button>
           </div>
           <div id="history-list" class="list">
             <p class="muted-text">No history yet</p>
@@ -105,12 +179,25 @@
         </div>
       </section>
 
-      <!-- Bookmarks -->
+      <!-- Bookmarks Tab -->
       <section class="tab-content" id="tab-content-bookmarks">
-        <div class="section-card">
-          <div class="section-header">
-            <h3 class="section-title">Saved Movies</h3>
-            <button id="clear-bookmarks-btn" class="ghost-btn small">Clear</button>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-left">
+              <div class="card-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
+              <h3 class="card-title">Saved Movies</h3>
+            </div>
+            <button id="clear-bookmarks-btn" class="ghost-btn" title="Clear bookmarks">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Clear</span>
+            </button>
           </div>
           <div id="bookmarks-list" class="list">
             <p class="muted-text">No bookmarks yet</p>
@@ -123,53 +210,101 @@
     <div id="settings-panel" class="settings-overlay hidden">
       <div class="settings-modal">
         <div class="settings-head">
-          <h2>Settings</h2>
-          <button class="close-settings-btn icon-btn">
+          <div class="settings-head-left">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <h2>Settings</h2>
+          </div>
+          <button class="close-settings-btn icon-btn" aria-label="Close settings">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </div>
+
         <div class="settings-body">
-          <label class="toggle-row">
-            <span>Enable Extension</span>
-            <input type="checkbox" id="extension-enabled" class="toggle-input">
-          </label>
-          <label class="toggle-row">
-            <span>Auto Track Movies</span>
-            <input type="checkbox" id="auto-track" class="toggle-input">
-          </label>
-          <label class="toggle-row">
-            <span>Show Notifications</span>
-            <input type="checkbox" id="show-notifications" class="toggle-input">
-          </label>
-          <label class="number-row">
-            <span>Max History Items</span>
-            <input type="number" id="max-history" class="num-input" min="5" max="100" value="20">
-          </label>
-          <label class="number-row">
-            <span>Recommendations Count</span>
-            <input type="number" id="recommendation-count" class="num-input" min="3" max="12" value="6">
-          </label>
-
-          <hr class="divider">
-
-          <h4 class="settings-section-title">Data</h4>
-          <div class="settings-actions">
-            <button id="export-data-btn" class="outline-btn">Export Data</button>
-            <button id="clear-cache-btn" class="outline-btn">Clear Cache</button>
-            <button id="reset-all-btn" class="danger-btn">Reset All Data</button>
+          <div class="settings-group">
+            <h4 class="settings-group-title">Preferences</h4>
+            <label class="toggle-row">
+              <div class="toggle-label">
+                <span>Enable Extension</span>
+                <small>Track movies and show recommendations</small>
+              </div>
+              <input type="checkbox" id="extension-enabled" class="toggle-input">
+            </label>
+            <label class="toggle-row">
+              <div class="toggle-label">
+                <span>Auto Track Movies</span>
+                <small>Automatically detect & save movies you browse</small>
+              </div>
+              <input type="checkbox" id="auto-track" class="toggle-input">
+            </label>
+            <label class="toggle-row">
+              <div class="toggle-label">
+                <span>Show Notifications</span>
+                <small>Get notified about new recommendations</small>
+              </div>
+              <input type="checkbox" id="show-notifications" class="toggle-input">
+            </label>
           </div>
 
-          <div class="version-info">v1.0.0 · Movie Buddy</div>
+          <div class="settings-group">
+            <h4 class="settings-group-title">Limits</h4>
+            <label class="number-row">
+              <span>Max History Items</span>
+              <input type="number" id="max-history" class="num-input" min="5" max="100" value="20">
+            </label>
+            <label class="number-row">
+              <span>Recommendations Count</span>
+              <input type="number" id="recommendation-count" class="num-input" min="3" max="12" value="6">
+            </label>
+          </div>
+
+          <div class="settings-group">
+            <h4 class="settings-group-title">Data Management</h4>
+            <div class="settings-actions">
+              <button id="export-data-btn" class="outline-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Export Data
+              </button>
+              <button id="clear-cache-btn" class="outline-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                Clear Cache
+              </button>
+              <button id="reset-all-btn" class="danger-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Reset All Data
+              </button>
+            </div>
+          </div>
+
+          <div class="version-info">
+            <span class="version-dot"></span>
+            v1.0.0 · Movie Buddy
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
-    <footer class="footer">
-      <kbd>Alt</kbd> + <kbd>R</kbd> toggle recommendations on page
+    <footer class="footer" id="footer">
+      <div class="footer-shortcut">
+        <kbd>Alt</kbd> + <kbd>R</kbd>
+        <span>toggle recommendations on page</span>
+      </div>
     </footer>
   </div>
 
