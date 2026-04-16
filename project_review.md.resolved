@@ -1,0 +1,289 @@
+# 🎬 Movie Extension — Full Code Review
+
+## Project Overview
+
+| Attribute | Detail |
+|---|---|
+| **Type** | Chrome Extension (Manifest V3) |
+| **Purpose** | Detect movies on Hotstar/Prime Video, track watch history, show personalized recommendations via TMDb API |
+| **Total Source Files** | 11 JS/HTML/CSS files |
+| **External Dependencies** | Zero (vanilla JS) |
+| **API** | TMDb (The Movie Database) |
+
+---
+
+## Architecture Diagram
+
+```mermaid
+graph LR
+  subgraph "Content Scripts (per tab)"
+    CS["content.js"] --> PD["platformDetectors.js"]
+    CS --> OV["ui/overlay.js"]
+  end
+
+  subgraph "Utilities (shared)"
+    API["utils/api.js"]
+    CACHE["utils/cache.js"]
+    STORE["utils/storage.js"]
+    REC["utils/recommender.js"]
+  end
+
+  subgraph "Background"
+    BG["background/background.js"]
+  end
+
+  subgraph "Popup"
+    PH["popup/popup.html"]
+    PJS["popup/popup.js"]
+    PCSS["popup/popup.css"]
+  end
+
+  CS -->|"chrome.runtime messages"| BG
+  PJS -->|"chrome.tabs.sendMessage"| CS
+  PJS -->|"chrome.runtime messages"| BG
+  CS --> API
+  CS --> STORE
+  CS --> CACHE
+  CS --> REC
+  PJS --> API
+  PJS --> STORE
+  PJS --> CACHE
+```
+
+---
+
+## 🔴 Critical Bugs (Extension Will Not Work)
+
+### 1. Content script dependencies are not loaded
+
+> [!CAUTION]
+> This is a **show-stopper**. The extension will crash immediately on any supported page.
+
+[manifest.json](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/manifest.json) only injects `content/content.js`:
+
+```json
+"content_scripts": [
+  {
+    "matches": ["https://www.hotstar.com/*"],
+    "js": ["content/content.js"],
+    "run_at": "document_start"
+  }
+]
+```
+
+But `content.js` calls `PlatformDetectors`, `Storage`, `API`, `Cache`, `Recommender`, and `Overlay` — **none of which are injected**. These are all separate files that are never loaded into the content script context.
+
+**Fix required** — add all dependencies to the manifest:
+
+```diff
+ "content_scripts": [
+   {
+     "matches": ["https://www.hotstar.com/*"],
+     "js": [
++      "utils/cache.js",
++      "utils/api.js",
++      "utils/storage.js",
++      "utils/recommender.js",
++      "content/platformDetectors.js",
++      "ui/overlay.js",
+       "content/content.js"
+     ],
+-    "run_at": "document_start"
++    "run_at": "document_idle"
+   }
+ ]
+```
+
+> [!IMPORTANT]
+> `run_at: "document_start"` is also wrong here — the content script queries DOM elements (`document.querySelector('h1')`) which don't exist yet at `document_start`. Change to `document_idle`.
+
+---
+
+### 2. Missing icon files — extension won't load
+
+[manifest.json](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/manifest.json#L42-L46) references three icon PNGs:
+
+```json
+"icons": {
+  "16": "assets/icons/icon-16.png",
+  "48": "assets/icons/icon-48.png",
+  "128": "assets/icons/icon-128.png"
+}
+```
+
+The `assets/icons/` directory only contains a `README.md` — **no actual icon files exist**. Chrome will refuse to load the extension or show errors.
+
+---
+
+### 3. Missing `alarms` permission
+
+[background.js:304](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/background/background.js#L304) uses `chrome.alarms.create()` but `"alarms"` is **not listed** in `manifest.json` permissions. This will throw a runtime error.
+
+```diff
+ "permissions": [
+   "storage",
+   "activeTab",
+-  "scripting"
++  "scripting",
++  "alarms"
+ ]
+```
+
+---
+
+### 4. Background script references undefined globals
+
+[background.js:90](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/background/background.js#L89-L95) calls `API.isConfigured()`, `API.BASE_URL`, and `API.TIMEOUT` — but the background service worker only loads `background.js`. The `API` object from `utils/api.js` is **never imported**.
+
+MV3 service workers don't support `<script>` tags. You'd need `importScripts()`:
+
+```js
+// Top of background.js
+importScripts('../utils/cache.js', '../utils/api.js', '../utils/storage.js');
+```
+
+---
+
+## 🟠 Significant Code Issues
+
+### 5. Wrong button reference in `resetAllData()`
+
+In [popup.js:343-362](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/popup/popup.js#L337-L363), the `resetAllData()` function disables/re-labels `clearCacheBtn` instead of `resetAllBtn`:
+
+```js
+async function resetAllData() {
+  clearCacheBtn.disabled = true;               // ← Wrong! Should be resetAllBtn
+  clearCacheBtn.textContent = 'Resetting...';  // ← Wrong!
+  // ...
+  clearCacheBtn.textContent = 'Reset All Data'; // ← Wrong!
+}
+```
+
+This means clicking "Reset All Data" disables the "Clear Cache" button and changes its label.
+
+---
+
+### 6. Genre tracking doesn't work for `searchMovie()` results
+
+[api.js:90](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/utils/api.js#L90) stores `genre_ids` (integer arrays like `[28, 12]`) from the TMDb search endpoint:
+
+```js
+genres: movie.genre_ids || [],  // → [28, 12, 878]
+```
+
+But [storage.js:98](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/utils/storage.js#L97-L101) expects genre **objects** with `.name`:
+
+```js
+if (typeof genre === 'object' && genre.name) {
+  genreCount[genre.name] = (genreCount[genre.name] || 0) + 1;
+}
+```
+
+Since `genre_ids` are plain numbers (not objects), genres are **never counted** from the content script flow. The genre profile will always remain empty unless `getMovieDetails()` is called separately (which it currently isn't).
+
+---
+
+### 7. Duplicated logic across background.js and storage.js/cache.js
+
+| Function | background.js | storage.js / cache.js |
+|---|---|---|
+| `getHistory()` | Lines 147-155 | `Storage.getHistory()` |
+| `getBookmarks()` | Lines 161-169 | `Storage.getBookmarks()` |
+| `exportUserData()` | Lines 175-197 | `Storage.exportData()` |
+| `getCacheStats()` | Lines 203-232 | `Cache.getStats()` |
+| `clearCache()` | Lines 238-257 | `Cache.clearAll()` |
+| `trackMovieView()` | Lines 264-299 | `Storage.addToHistory()` |
+| `getProfileSummary()` | Lines 113-141 | `Storage.getProfileSummary()` |
+
+The background script **re-implements** nearly every function that already exists in the utility modules. This creates maintenance risk — if you fix a bug in one, the other stays broken.
+
+---
+
+### 8. `setupDynamicDetection()` is defined but never called
+
+[content.js:235-255](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/content/content.js#L235-L255) — dead code. The function creates a `MutationObserver` but is never invoked anywhere.
+
+---
+
+### 9. `getMovieSpecificRecommendations()` uses wrong field names
+
+[recommender.js:310-318](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/utils/recommender.js#L309-L318) maps fields as `poster_path` and `vote_average` from the raw API response, but `API.getSimilarMovies()` already normalizes to `posterPath` and `rating`. This means the returned objects will have `undefined` for poster and rating fields.
+
+---
+
+## 🟡 Code Quality & Design Concerns
+
+### 10. API key hardcoded in source
+
+[api.js:10](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/utils/api.js#L10) — Once a real key is added, it's fully visible in the extension source. Anyone who installs the extension can extract it. For a Chrome Web Store extension, consider a lightweight proxy server or at minimum storing in `chrome.storage.sync` with an options page.
+
+### 11. No rate limiting on TMDb API calls
+
+The recommender fetches similar movies for the last 3 history items + movies by top 3 genres = up to **6 API calls per recommendation request**, each potentially hitting TMDb. TMDb rate-limits at ~40 requests/10 seconds. Rapid navigation could cause 429 errors.
+
+### 12. MutationObserver on `document.documentElement` is expensive
+
+[platformDetectors.js:142-154](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/content/platformDetectors.js#L142-L154) — observes the **entire document** with `subtree: true` + `characterData: true`. On complex SPAs like Hotstar/Prime, this fires thousands of callbacks. Combined with the duplicate observer in `setupMovieDetection()`, this can cause noticeable performance degradation.
+
+Consider debouncing callbacks or observing narrower DOM subtrees.
+
+### 13. No input validation on import
+
+[storage.js:344-364](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/utils/storage.js#L344-L364) — `importData()` trusts the backup object without validating structure, types, or sanitizing values. Malicious/corrupted backup files could inject arbitrary data into storage.
+
+### 14. History dedup window too narrow
+
+[storage.js:85](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/utils/storage.js#L85) — 60-second dedup window means the same movie gets re-added if the user stays on the page for over a minute (which is common). A better approach: dedup by `tmdbId` regardless of time.
+
+### 15. Overlay card click does nothing
+
+[overlay.js:300-307](file:///c:/Users/ASUS/Documents/MY%20PROJECT/extension/movie-extension/ui/overlay.js#L300-L307) — clicking a movie card only logs to console. No navigation to the movie on TMDb or the streaming platform. This feels like an incomplete feature.
+
+---
+
+## ✅ What's Done Well
+
+| Aspect | Assessment |
+|---|---|
+| **Code organization** | Clean module separation (API, Cache, Storage, Recommender, Overlay) |
+| **Error handling** | Consistent try-catch with console logging throughout |
+| **HTML escaping** | Proper XSS prevention via `_escapeHtml()` / `escapeHtml()` |
+| **Fetch resilience** | Retry with exponential backoff + AbortController timeout |
+| **Cache design** | TTL-based with automatic expiry cleanup via alarms |
+| **UI/UX** | Dark theme, animations, skeleton loaders, keyboard shortcut (Alt+R) |
+| **Accessibility** | `focus-visible` outlines, `aria-label` on buttons |
+| **Privacy** | All data local, no external tracking |
+| **Popup design** | Tab-based UI with settings modal is well-structured |
+
+---
+
+## 📋 Prioritized Fix List
+
+| Priority | Issue | Effort |
+|---|---|---|
+| 🔴 P0 | Add all dependency scripts to `manifest.json` content_scripts | 5 min |
+| 🔴 P0 | Change `run_at` to `document_idle` | 1 min |
+| 🔴 P0 | Create actual icon PNG files (16, 48, 128px) | 10 min |
+| 🔴 P0 | Add `"alarms"` permission to manifest | 1 min |
+| 🔴 P0 | Add `importScripts()` in background.js for utils | 5 min |
+| 🟠 P1 | Fix `resetAllBtn` reference in popup.js | 2 min |
+| 🟠 P1 | Fix genre tracking — fetch full details after search | 15 min |
+| 🟠 P1 | Fix `getMovieSpecificRecommendations()` field mapping | 5 min |
+| 🟠 P1 | Remove duplicated functions in background.js | 20 min |
+| 🟡 P2 | Remove dead `setupDynamicDetection()` code | 1 min |
+| 🟡 P2 | Add debouncing to MutationObserver callbacks | 10 min |
+| 🟡 P2 | Improve history dedup logic (by tmdbId) | 5 min |
+| 🟡 P2 | Add card click action (open TMDb link) | 10 min |
+| 🟡 P2 | Add input validation to `importData()` | 15 min |
+| 🟡 P3 | Add API rate limiting | 20 min |
+
+---
+
+## Verdict
+
+> [!WARNING]
+> The extension **will not work at all** in its current state. The 5 critical P0 issues (missing script injections, missing icons, missing permissions, missing imports in background) must be fixed before Chrome can even load and run it.
+
+The underlying architecture and code patterns are solid — the module design, caching, and UI are well-thought-out. But the wiring between components (manifest configuration) is fundamentally broken. Once the P0/P1 items are addressed, this would be a functional, well-structured extension.
+
+**Would you like me to fix these issues?**

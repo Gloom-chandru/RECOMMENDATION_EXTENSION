@@ -126,11 +126,16 @@ const PlatformDetectors = {
    * @returns {MutationObserver}
    */
   observeTitleChanges(callback) {
+    let debounceTimer = null;
+
     const observer = new MutationObserver(() => {
-      const title = this.extractMovieTitle();
-      if (title) {
-        callback(title);
-      }
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const title = this.extractMovieTitle();
+        if (title) {
+          callback(title);
+        }
+      }, 300);
     });
 
     // Watch for changes in main content area
@@ -144,7 +149,7 @@ const PlatformDetectors = {
         observer.observe(target, {
           childList: true,
           subtree: true,
-          characterData: true,
+          characterData: false,
           attributes: true,
           attributeFilter: ['data-testid', 'title', 'aria-label']
         });

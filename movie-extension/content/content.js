@@ -8,6 +8,7 @@
 let lastTrackedMovie = null;
 let movieTitleObserver = null;
 let extensionEnabled = true;
+let debounceTimer = null;
 
 /**
  * Initialize content script
@@ -75,25 +76,27 @@ function setupMovieDetection() {
 
   // Also watch for navigation
   window.addEventListener('hashchange', () => {
-    setTimeout(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
       if (PlatformDetectors.isMovieDetailPage()) {
         const title = PlatformDetectors.extractMovieTitle();
         if (title && title !== lastTrackedMovie) {
           handleMovieDetected(title);
         }
       }
-    }, 500);
+    }, 800);
   });
 
   window.addEventListener('popstate', () => {
-    setTimeout(() => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
       if (PlatformDetectors.isMovieDetailPage()) {
         const title = PlatformDetectors.extractMovieTitle();
         if (title && title !== lastTrackedMovie) {
           handleMovieDetected(title);
         }
       }
-    }, 500);
+    }, 800);
   });
 }
 
@@ -114,9 +117,16 @@ async function handleMovieDetected(movieTitle) {
       return;
     }
 
-    // Add to history
+    // Fetch full details to get genre names (searchMovie only returns genre_ids)
+    let fullDetails = null;
+    if (movieData.id) {
+      fullDetails = await API.getMovieDetails(movieData.id);
+    }
+
+    // Add to history with full genre names
     const movieWithPlatform = {
       ...movieData,
+      genres: fullDetails?.genres || movieData.genres,
       platform: PlatformDetectors.getCurrentPlatform()
     };
 
@@ -229,38 +239,13 @@ document.addEventListener('keydown', (e) => {
 });
 
 /**
- * Detect dynamic page changes using Intersection Observer
- * for when MutationObserver might miss updates
- */
-function setupDynamicDetection() {
-  // Create observer for visibility changes
-  const pageChangeObserver = new MutationObserver(() => {
-    if (PlatformDetectors.isMovieDetailPage()) {
-      const title = PlatformDetectors.extractMovieTitle();
-      if (title && title !== lastTrackedMovie) {
-        handleMovieDetected(title);
-      }
-    }
-  });
-
-  // Observe document for large changes
-  pageChangeObserver.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: false,
-    characterData: false
-  });
-
-  return pageChangeObserver;
-}
-
-/**
  * Clean up on page unload
  */
 window.addEventListener('beforeunload', () => {
   if (movieTitleObserver) {
     movieTitleObserver.disconnect();
   }
+  clearTimeout(debounceTimer);
   Overlay.hide();
 });
 

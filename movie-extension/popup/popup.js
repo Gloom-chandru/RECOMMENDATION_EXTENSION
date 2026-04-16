@@ -230,9 +230,10 @@ async function loadBookmarks() {
       .join('');
 
     // Attach remove listeners
-    document.querySelectorAll('.list-item-remove').forEach(btn => {
+    document.querySelectorAll('#bookmarks-list .list-item-remove').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const movieId = parseInt(e.target.dataset.movieId);
+        const target = e.target.closest('.list-item-remove');
+        const movieId = parseInt(target.dataset.movieId);
         await Storage.removeBookmark(movieId);
         await loadBookmarks();
       });
@@ -294,9 +295,6 @@ async function clearHistory() {
   }
 
   try {
-    const data = await chrome.storage.local.get('user_history');
-    const history = data.user_history || [];
-    
     await chrome.storage.local.set({
       user_history: [],
       genre_count: {}
@@ -340,8 +338,8 @@ async function resetAllData() {
   }
 
   try {
-    clearCacheBtn.disabled = true;
-    clearCacheBtn.textContent = 'Resetting...';
+    resetAllBtn.disabled = true;
+    resetAllBtn.textContent = 'Resetting...';
 
     await chrome.storage.local.clear();
     await Storage.init();
@@ -351,15 +349,15 @@ async function resetAllData() {
     await loadBookmarks();
     await loadSettings();
 
-    clearCacheBtn.disabled = false;
-    clearCacheBtn.textContent = 'Reset All Data';
+    resetAllBtn.disabled = false;
+    resetAllBtn.textContent = 'Reset All Data';
 
     alert('All data has been reset');
   } catch (error) {
     console.error('[Popup] Error resetting data:', error);
     alert('Error resetting data');
-    clearCacheBtn.disabled = false;
-    clearCacheBtn.textContent = 'Reset All Data';
+    resetAllBtn.disabled = false;
+    resetAllBtn.textContent = 'Reset All Data';
   }
 }
 

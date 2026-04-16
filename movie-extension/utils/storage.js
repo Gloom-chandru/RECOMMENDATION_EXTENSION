@@ -79,36 +79,39 @@ const Storage = {
         rating: movie.rating || 0
       };
 
-      // Check if already in history (avoid duplicates from same session)
+      // Check if already in history (avoid duplicates by tmdbId)
       const existingIndex = history.findIndex(
-        h => h.title.toLowerCase() === movie.title.toLowerCase() &&
-             (Date.now() - h.timestamp) < 60000 // Within 1 minute
+        h => h.tmdbId && movie.id && h.tmdbId === movie.id
       );
 
-      if (existingIndex === -1) {
+      if (existingIndex !== -1) {
+        // Update timestamp for existing entry (move to top)
+        history.splice(existingIndex, 1);
         history.unshift(historyEntry);
-
-        // Limit history size
-        const maxItems = settings.maxHistoryItems || 20;
-        history = history.slice(0, maxItems);
-
-        // Update genre count
-        if (movie.genres && Array.isArray(movie.genres)) {
-          movie.genres.forEach(genre => {
-            if (typeof genre === 'object' && genre.name) {
-              genreCount[genre.name] = (genreCount[genre.name] || 0) + 1;
-            }
-          });
-        }
-
-        await chrome.storage.local.set({
-          [this.KEYS.HISTORY]: history,
-          [this.KEYS.GENRE_COUNT]: genreCount,
-          [this.KEYS.LAST_UPDATED]: Date.now()
-        });
-
-        console.log('[Storage] Movie added to history:', movie.title);
+      } else {
+        history.unshift(historyEntry);
       }
+
+      // Limit history size
+      const maxItems = settings.maxHistoryItems || 20;
+      history = history.slice(0, maxItems);
+
+      // Update genre count
+      if (movie.genres && Array.isArray(movie.genres)) {
+        movie.genres.forEach(genre => {
+          if (typeof genre === 'object' && genre.name) {
+            genreCount[genre.name] = (genreCount[genre.name] || 0) + 1;
+          }
+        });
+      }
+
+      await chrome.storage.local.set({
+        [this.KEYS.HISTORY]: history,
+        [this.KEYS.GENRE_COUNT]: genreCount,
+        [this.KEYS.LAST_UPDATED]: Date.now()
+      });
+
+      console.log('[Storage] Movie added to history:', movie.title);
     } catch (error) {
       console.error('[Storage] Error adding to history:', error);
     }
@@ -343,18 +346,36 @@ const Storage = {
    */
   async importData(backup) {
     try {
-      if (!backup || !backup.data) {
-        throw new Error('Invalid backup format');
+      if (!backup || typeof backup !== 'object' || !backup.data || typeof backup.data !== 'object') {
+        throw new Error('Invalid backup format: missing or malformed data');
       }
 
       const userDataKeys = Object.values(this.KEYS);
       const importData = {};
 
+      // Validate and sanitize each key
       userDataKeys.forEach(key => {
-        if (backup.data[key]) {
-          importData[key] = backup.data[key];
+        if (backup.data[key] !== undefined) {
+          const value = backup.data[key];
+
+          // Type validation per key
+          if (key === this.KEYS.HISTORY && !Array.isArray(value)) return;
+          if (key === this.KEYS.BOOKMARKS && !Array.isArray(value)) return;
+          if (key === this.KEYS.GENRE_COUNT && typeof value !== 'object') return;
+          if (key === this.KEYS.SETTINGS && typeof value !== 'object') return;
+
+          // Limit array sizes to prevent storage abuse
+          if (Array.isArray(value)) {
+            importData[key] = value.slice(0, 100);
+          } else {
+            importData[key] = value;
+          }
         }
       });
+
+      if (Object.keys(importData).length === 0) {
+        throw new Error('No valid data found in backup');
+      }
 
       await chrome.storage.local.set(importData);
       console.log('[Storage] Data imported successfully');

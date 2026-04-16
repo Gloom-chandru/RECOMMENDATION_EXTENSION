@@ -309,12 +309,12 @@ const Recommender = {
       return similar.slice(0, this.TARGET_RECOMMENDATION_COUNT).map(m => ({
         id: m.id,
         title: m.title,
-        posterPath: m.poster_path,
-        rating: m.vote_average,
-        genres: m.genre_ids || [],
-        description: m.overview,
+        posterPath: m.posterPath,
+        rating: m.rating,
+        genres: m.genres || [],
+        description: m.description,
         explanation: `Similar to "${movieTitle}"`,
-        backdropPath: m.backdrop_path
+        backdropPath: m.backdropPath
       }));
     } catch (error) {
       console.error('[Recommender] Error getting movie-specific recommendations:', error);

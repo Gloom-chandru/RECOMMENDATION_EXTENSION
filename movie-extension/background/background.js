@@ -3,6 +3,9 @@
  * Handles background tasks, alarms, and cross-tab communication
  */
 
+// Import shared utility modules
+importScripts('../utils/cache.js', '../utils/api.js', '../utils/storage.js', '../utils/recommender.js');
+
 // Initialize on install
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
@@ -44,7 +47,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       switch (request.action) {
         case 'getProfile':
-          const profile = await getProfileSummary();
+          const profile = await Storage.getProfileSummary();
           sendResponse({ profile });
           break;
 
@@ -54,33 +57,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           break;
 
         case 'getHistory':
-          const history = await getHistory();
+          const history = await Storage.getHistory();
           sendResponse({ history });
           break;
 
         case 'getBookmarks':
-          const bookmarks = await getBookmarks();
+          const bookmarks = await Storage.getBookmarks();
           sendResponse({ bookmarks });
           break;
 
         case 'exportData':
-          const exported = await exportUserData();
+          const exported = await Storage.exportData();
           sendResponse({ data: exported });
           break;
 
         case 'getCacheStats':
-          const stats = await getCacheStats();
+          const stats = await Cache.getStats();
           sendResponse({ stats });
           break;
 
         case 'clearCache':
-          await clearCache();
+          await Cache.clearAll();
           sendResponse({ success: true });
           break;
 
         case 'trackView':
           if (request.movie) {
-            await trackMovieView(request.movie);
+            await Storage.addToHistory(request.movie);
             sendResponse({ success: true });
           }
           break;
@@ -107,198 +110,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 /**
- * Get user profile summary
- * @returns {Promise<Object>}
- */
-async function getProfileSummary() {
-  try {
-    const data = await chrome.storage.local.get([
-      'user_history',
-      'bookmarks',
-      'genre_count'
-    ]);
-
-    const history = data.user_history || [];
-    const bookmarks = data.bookmarks || [];
-    const genreCount = data.genre_count || {};
-
-    const topGenres = Object.entries(genreCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([genre]) => genre);
-
-    return {
-      totalWatches: history.length,
-      totalBookmarks: bookmarks.length,
-      topGenres: topGenres,
-      lastActivity: history[0]?.timestamp || null,
-      accountCreated: data.account_created || Date.now()
-    };
-  } catch (error) {
-    console.error('[Background] Error getting profile:', error);
-    return null;
-  }
-}
-
-/**
- * Get watch history
- * @returns {Promise<Array>}
- */
-async function getHistory() {
-  try {
-    const data = await chrome.storage.local.get('user_history');
-    return data.user_history || [];
-  } catch (error) {
-    console.error('[Background] Error getting history:', error);
-    return [];
-  }
-}
-
-/**
- * Get bookmarks
- * @returns {Promise<Array>}
- */
-async function getBookmarks() {
-  try {
-    const data = await chrome.storage.local.get('bookmarks');
-    return data.bookmarks || [];
-  } catch (error) {
-    console.error('[Background] Error getting bookmarks:', error);
-    return [];
-  }
-}
-
-/**
- * Export user data for backup
- * @returns {Promise<Object>}
- */
-async function exportUserData() {
-  try {
-    const data = await chrome.storage.local.get();
-    
-    const userDataKeys = ['user_history', 'bookmarks', 'genre_count', 'settings'];
-    const exportData = {};
-
-    userDataKeys.forEach(key => {
-      if (data[key]) {
-        exportData[key] = data[key];
-      }
-    });
-
-    return {
-      version: '1.0.0',
-      exportedAt: new Date().toISOString(),
-      data: exportData
-    };
-  } catch (error) {
-    console.error('[Background] Error exporting data:', error);
-    return null;
-  }
-}
-
-/**
- * Get cache statistics
- * @returns {Promise<Object>}
- */
-async function getCacheStats() {
-  try {
-    const data = await chrome.storage.local.get();
-    
-    const cacheItems = Object.entries(data).filter(([key]) => 
-      key.startsWith('cache:')
-    );
-
-    let totalSize = 0;
-    let expiredCount = 0;
-    const now = Date.now();
-
-    cacheItems.forEach(([, item]) => {
-      totalSize += JSON.stringify(item).length;
-      if (item.expiresAt && item.expiresAt < now) {
-        expiredCount++;
-      }
-    });
-
-    return {
-      totalItems: cacheItems.length,
-      totalSize: totalSize,
-      expiredItems: expiredCount,
-      timestamp: now
-    };
-  } catch (error) {
-    console.error('[Background] Error getting cache stats:', error);
-    return null;
-  }
-}
-
-/**
- * Clear expired cache items
- * @returns {Promise<void>}
- */
-async function clearCache() {
-  try {
-    const data = await chrome.storage.local.get();
-    const now = Date.now();
-    const keysToRemove = [];
-
-    Object.entries(data).forEach(([key, value]) => {
-      if (key.startsWith('cache:') && value.expiresAt && value.expiresAt < now) {
-        keysToRemove.push(key);
-      }
-    });
-
-    if (keysToRemove.length > 0) {
-      await chrome.storage.local.remove(keysToRemove);
-      console.log(`[Background] Cleared ${keysToRemove.length} expired cache items`);
-    }
-  } catch (error) {
-    console.error('[Background] Error clearing cache:', error);
-  }
-}
-
-/**
- * Track movie view
- * @param {Object} movie
- * @returns {Promise<void>}
- */
-async function trackMovieView(movie) {
-  try {
-    const data = await chrome.storage.local.get(['user_history', 'genre_count']);
-    
-    let history = data.user_history || [];
-    let genreCount = data.genre_count || {};
-
-    const entry = {
-      title: movie.title,
-      tmdbId: movie.id,
-      posterPath: movie.posterPath,
-      timestamp: Date.now(),
-      platform: movie.platform || 'unknown',
-      genres: movie.genres || []
-    };
-
-    history.unshift(entry);
-    history = history.slice(0, 20); // Keep last 20
-
-    if (movie.genres) {
-      movie.genres.forEach(genre => {
-        const genreName = typeof genre === 'object' ? genre.name : genre;
-        genreCount[genreName] = (genreCount[genreName] || 0) + 1;
-      });
-    }
-
-    await chrome.storage.local.set({
-      user_history: history,
-      genre_count: genreCount
-    });
-
-    console.log('[Background] Movie tracked:', movie.title);
-  } catch (error) {
-    console.error('[Background] Error tracking movie:', error);
-  }
-}
-
-/**
  * Set up periodic cache cleanup (every 6 hours)
  */
 chrome.alarms.create('cleanupCache', { periodInMinutes: 360 });
@@ -306,7 +117,7 @@ chrome.alarms.create('cleanupCache', { periodInMinutes: 360 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'cleanupCache') {
     console.log('[Background] Running cache cleanup');
-    clearCache();
+    Cache.clearAll();
   }
 });
 
@@ -317,14 +128,21 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== 'complete') return;
 
-  const url = new URL(tab.url);
-  const isSupported = url.hostname.includes('hotstar.com') || 
-                     url.hostname.includes('primevideo.com');
+  // tab.url can be undefined if we don't have permissions
+  if (!tab.url) return;
 
-  if (!isSupported) return;
+  try {
+    const url = new URL(tab.url);
+    const isSupported = url.hostname.includes('hotstar.com') || 
+                       url.hostname.includes('primevideo.com');
 
-  // Could emit notification that extension is ready on this tab
-  console.log('[Background] Tab updated on supported platform:', url.hostname);
+    if (!isSupported) return;
+
+    // Could emit notification that extension is ready on this tab
+    console.log('[Background] Tab updated on supported platform:', url.hostname);
+  } catch (error) {
+    // Ignore invalid URLs
+  }
 });
 
 console.log('[Background] Service worker registered');

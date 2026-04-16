@@ -296,13 +296,15 @@ const Overlay = {
       });
     });
 
-    // Card click to open (could be extended for detailed view)
+    // Card click to open TMDb page
     const cards = this.container.querySelectorAll('.mr-card');
     cards.forEach(card => {
       card.addEventListener('click', (e) => {
         if (e.target.closest('.mr-bookmark-btn')) return;
-        // Could open movie details or external link here
-        console.log('Card clicked:', card.dataset.movieId);
+        const movieId = card.dataset.movieId;
+        if (movieId) {
+          window.open(`https://www.themoviedb.org/movie/${movieId}`, '_blank');
+        }
       });
     });
   },
