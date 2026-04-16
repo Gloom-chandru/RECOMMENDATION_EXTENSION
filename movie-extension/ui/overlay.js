@@ -1,7 +1,7 @@
 /**
- * Overlay UI Manager — BuyHatke-inspired Design
- * Compact sidebar with horizontal card layout
+ * Overlay UI Manager — Premium Sidebar v2.0
  * Floating trigger button + glassmorphism panel
+ * Refined card layout with micro-animations
  */
 
 const Overlay = {
@@ -30,7 +30,7 @@ const Overlay = {
     this.triggerBtn.id = 'mr-trigger-btn';
     this.triggerBtn.className = 'mr-trigger';
     this.triggerBtn.innerHTML = `
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
         <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
         <line x1="7" y1="2" x2="7" y2="22"></line>
         <line x1="17" y1="2" x2="17" y2="22"></line>
@@ -38,7 +38,8 @@ const Overlay = {
       </svg>
       <span class="mr-trigger-badge" id="mr-badge" style="display:none;">0</span>
     `;
-    this.triggerBtn.title = 'Movie Recommendations';
+    this.triggerBtn.title = 'Movie Recommendations (Alt+R)';
+    this.triggerBtn.setAttribute('aria-label', 'Open movie recommendations');
     this.triggerBtn.addEventListener('click', () => this.toggle());
     document.body.appendChild(this.triggerBtn);
 
@@ -103,39 +104,56 @@ const Overlay = {
   },
 
   /**
-   * Main render — horizontal card layout
+   * Build header HTML (shared across all panel states)
+   */
+  _buildHeader(subtitle = '') {
+    return `
+      <div class="mr-head">
+        <div class="mr-head-left">
+          <div class="mr-head-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#mr-logo-g)" stroke-width="2.2">
+              <defs>
+                <linearGradient id="mr-logo-g" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#a78bfa"/>
+                  <stop offset="100%" stop-color="#818cf8"/>
+                </linearGradient>
+              </defs>
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <line x1="7" y1="2" x2="7" y2="22"></line>
+              <line x1="17" y1="2" x2="17" y2="22"></line>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+            </svg>
+          </div>
+          <div class="mr-head-text">
+            <span class="mr-head-title">Movie Buddy</span>
+            ${subtitle ? `<span class="mr-head-sub">${subtitle}</span>` : ''}
+          </div>
+        </div>
+        <button class="mr-close-btn" aria-label="Close panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    `;
+  },
+
+  /**
+   * Main render — card list
    */
   _render() {
     const recs = this.currentRecommendations;
 
     this.container.innerHTML = `
       <div class="mr-panel">
-        <div class="mr-head">
-          <div class="mr-head-left">
-            <svg class="mr-logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
-              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-              <line x1="7" y1="2" x2="7" y2="22"></line>
-              <line x1="17" y1="2" x2="17" y2="22"></line>
-              <line x1="2" y1="12" x2="22" y2="12"></line>
-            </svg>
-            <span class="mr-head-title">Movie Buddy</span>
-            <span class="mr-head-count">${recs.length} picks</span>
-          </div>
-          <button class="mr-close-btn" aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-
+        ${this._buildHeader(`${recs.length} pick${recs.length !== 1 ? 's' : ''} for you`)}
         <div class="mr-cards">
           ${recs.map((m, i) => this._renderCard(m, i)).join('')}
         </div>
-
         <div class="mr-foot">
-          <span>Powered by TMDb</span>
-          <span>Alt+R to toggle</span>
+          <span class="mr-foot-brand">Powered by TMDb</span>
+          <span class="mr-foot-shortcut"><kbd>Alt</kbd>+<kbd>R</kbd></span>
         </div>
       </div>
     `;
@@ -144,7 +162,7 @@ const Overlay = {
   },
 
   /**
-   * Horizontal movie card
+   * Movie card — horizontal layout
    */
   _renderCard(movie, index) {
     const poster = API.getPosterUrl(movie.posterPath, 'w185');
@@ -152,7 +170,7 @@ const Overlay = {
     const year = movie.releaseDate ? movie.releaseDate.split('-')[0] : '';
     const ratingClass = movie.rating >= 7 ? 'high' : movie.rating >= 5 ? 'mid' : 'low';
 
-    // Map genre IDs to names for display
+    // Map genre IDs to names
     const genreMap = {28:'Action',12:'Adventure',16:'Animation',35:'Comedy',80:'Crime',99:'Documentary',18:'Drama',10751:'Family',14:'Fantasy',36:'History',27:'Horror',10402:'Music',9648:'Mystery',10749:'Romance',878:'Sci-Fi',53:'Thriller',10752:'War',37:'Western'};
 
     let genreTags = '';
@@ -168,10 +186,15 @@ const Overlay = {
     const explanation = movie.explanation || movie.source || 'Recommended for you';
 
     return `
-      <div class="mr-card" data-id="${movie.id}" style="--delay:${index * 60}ms">
-        <div class="mr-poster">
-          <img src="${poster}" alt="${this._esc(movie.title)}" loading="lazy">
-          <div class="mr-rating ${ratingClass}">★ ${rating}</div>
+      <div class="mr-card" data-id="${movie.id}" style="--i:${index}">
+        <div class="mr-poster-wrap">
+          <img class="mr-poster-img" src="${poster}" alt="${this._esc(movie.title)}" loading="lazy">
+          <div class="mr-rating-badge ${ratingClass}">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            ${rating}
+          </div>
         </div>
         <div class="mr-info">
           <h4 class="mr-title">${this._esc(movie.title)}</h4>
@@ -181,8 +204,8 @@ const Overlay = {
           </div>
           <p class="mr-why">${this._esc(explanation)}</p>
         </div>
-        <button class="mr-save" data-movie-id="${movie.id}" title="Bookmark">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="mr-save" data-movie-id="${movie.id}" title="Bookmark" aria-label="Bookmark ${this._esc(movie.title)}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
           </svg>
         </button>
@@ -193,30 +216,14 @@ const Overlay = {
   _renderLoading() {
     this.container.innerHTML = `
       <div class="mr-panel">
-        <div class="mr-head">
-          <div class="mr-head-left">
-            <svg class="mr-logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
-              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-              <line x1="7" y1="2" x2="7" y2="22"></line>
-              <line x1="17" y1="2" x2="17" y2="22"></line>
-              <line x1="2" y1="12" x2="22" y2="12"></line>
-            </svg>
-            <span class="mr-head-title">Movie Buddy</span>
-          </div>
-          <button class="mr-close-btn" aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
+        ${this._buildHeader('Finding movies...')}
         <div class="mr-cards">
-          ${[1,2,3,4].map(() => `
-            <div class="mr-card mr-skeleton-card">
-              <div class="mr-poster mr-shimmer"></div>
+          ${[1,2,3,4].map((_, i) => `
+            <div class="mr-card mr-skel" style="--i:${i}">
+              <div class="mr-poster-wrap mr-shimmer"></div>
               <div class="mr-info">
-                <div class="mr-shimmer" style="width:70%;height:14px;border-radius:4px;margin-bottom:8px"></div>
-                <div class="mr-shimmer" style="width:50%;height:10px;border-radius:4px;margin-bottom:6px"></div>
+                <div class="mr-shimmer" style="width:75%;height:14px;border-radius:4px;margin-bottom:8px"></div>
+                <div class="mr-shimmer" style="width:55%;height:10px;border-radius:4px;margin-bottom:6px"></div>
                 <div class="mr-shimmer" style="width:90%;height:10px;border-radius:4px"></div>
               </div>
             </div>
@@ -230,27 +237,20 @@ const Overlay = {
   _renderEmpty() {
     this.container.innerHTML = `
       <div class="mr-panel">
-        <div class="mr-head">
-          <div class="mr-head-left">
-            <svg class="mr-logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
-              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-              <line x1="7" y1="2" x2="7" y2="22"></line>
-              <line x1="17" y1="2" x2="17" y2="22"></line>
-              <line x1="2" y1="12" x2="22" y2="12"></line>
-            </svg>
-            <span class="mr-head-title">Movie Buddy</span>
-          </div>
-          <button class="mr-close-btn" aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
+        ${this._buildHeader()}
         <div class="mr-empty">
-          <div class="mr-empty-icon">🎬</div>
-          <p>No recommendations yet</p>
-          <small>Browse some movies and we'll suggest what to watch next!</small>
+          <div class="mr-empty-visual">
+            <div class="mr-empty-circle">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                <line x1="7" y1="2" x2="7" y2="22"></line>
+                <line x1="17" y1="2" x2="17" y2="22"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+              </svg>
+            </div>
+          </div>
+          <p class="mr-empty-title">No recommendations yet</p>
+          <p class="mr-empty-desc">Browse some movies and we'll suggest what to watch next!</p>
         </div>
       </div>
     `;
@@ -260,27 +260,19 @@ const Overlay = {
   _renderError() {
     this.container.innerHTML = `
       <div class="mr-panel">
-        <div class="mr-head">
-          <div class="mr-head-left">
-            <svg class="mr-logo" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2">
-              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-              <line x1="7" y1="2" x2="7" y2="22"></line>
-              <line x1="17" y1="2" x2="17" y2="22"></line>
-              <line x1="2" y1="12" x2="22" y2="12"></line>
-            </svg>
-            <span class="mr-head-title">Movie Buddy</span>
-          </div>
-          <button class="mr-close-btn" aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
+        ${this._buildHeader()}
         <div class="mr-empty">
-          <div class="mr-empty-icon">⚠️</div>
-          <p>Couldn't load recommendations</p>
-          <small>Check your connection and try again.</small>
+          <div class="mr-empty-visual">
+            <div class="mr-empty-circle mr-error-circle">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+          </div>
+          <p class="mr-empty-title">Something went wrong</p>
+          <p class="mr-empty-desc">Check your connection and try again.</p>
         </div>
       </div>
     `;
@@ -303,12 +295,16 @@ const Overlay = {
           btn.classList.add('mr-saved');
           btn.querySelector('svg').setAttribute('fill', 'currentColor');
           btn.title = 'Saved!';
+
+          // Brief pulse animation
+          btn.style.transform = 'scale(1.3)';
+          setTimeout(() => { btn.style.transform = ''; }, 200);
         }
       });
     });
 
     // Card click → open TMDb
-    this.container.querySelectorAll('.mr-card').forEach(card => {
+    this.container.querySelectorAll('.mr-card:not(.mr-skel)').forEach(card => {
       card.addEventListener('click', (e) => {
         if (e.target.closest('.mr-save')) return;
         const id = card.dataset.id;
@@ -329,6 +325,10 @@ const Overlay = {
     const s = document.createElement('style');
     s.id = 'mr-styles';
     s.textContent = `
+      /* =============================================
+         Movie Buddy — Overlay Styles v2.0
+         ============================================= */
+
       /* ========== FLOATING TRIGGER ========== */
       .mr-trigger {
         position: fixed;
@@ -338,30 +338,38 @@ const Overlay = {
         width: 48px;
         height: 48px;
         border-radius: 14px;
-        border: none;
-        background: linear-gradient(135deg, #7c3aed, #6366f1);
+        border: 1px solid rgba(167, 139, 250, 0.2);
+        background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
         color: #fff;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5), 0 0 0 0 rgba(99,102,241,0.3);
-        transition: all 0.3s cubic-bezier(.4,0,.2,1);
-        animation: mr-pulse 2.5s ease-in-out infinite;
+        box-shadow:
+          0 4px 20px rgba(99, 102, 241, 0.4),
+          0 0 0 0 rgba(99, 102, 241, 0.3),
+          inset 0 1px 0 rgba(255,255,255,0.1);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: mr-breathe 3s ease-in-out infinite;
       }
       .mr-trigger:hover {
-        transform: scale(1.1);
-        box-shadow: 0 6px 28px rgba(99, 102, 241, 0.6);
+        transform: scale(1.08) translateY(-2px);
+        box-shadow:
+          0 8px 28px rgba(99, 102, 241, 0.5),
+          inset 0 1px 0 rgba(255,255,255,0.15);
         animation: none;
       }
-      @keyframes mr-pulse {
-        0%,100% { box-shadow: 0 4px 20px rgba(99,102,241,0.5), 0 0 0 0 rgba(99,102,241,0.3); }
-        50% { box-shadow: 0 4px 20px rgba(99,102,241,0.5), 0 0 0 8px rgba(99,102,241,0); }
+      .mr-trigger:active {
+        transform: scale(1);
+      }
+      @keyframes mr-breathe {
+        0%, 100% { box-shadow: 0 4px 20px rgba(99,102,241,0.4), 0 0 0 0 rgba(99,102,241,0.25); }
+        50% { box-shadow: 0 4px 20px rgba(99,102,241,0.4), 0 0 0 8px rgba(99,102,241,0); }
       }
       .mr-trigger-badge {
         position: absolute;
-        top: -4px;
-        right: -4px;
+        top: -5px;
+        right: -5px;
         background: #ef4444;
         color: #fff;
         font-size: 10px;
@@ -372,20 +380,32 @@ const Overlay = {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0 4px;
+        padding: 0 5px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        border: 2px solid var(--mr-bg, #0a0a1a);
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
       }
 
       /* ========== OVERLAY PANEL ========== */
       .mr-overlay {
+        --mr-bg: rgba(10, 10, 26, 0.95);
+        --mr-surface: rgba(255, 255, 255, 0.03);
+        --mr-border: rgba(255, 255, 255, 0.06);
+        --mr-border-hover: rgba(255, 255, 255, 0.12);
+        --mr-primary: #a78bfa;
+        --mr-primary-dim: rgba(167, 139, 250, 0.12);
+        --mr-text: #f0f0f5;
+        --mr-text-sec: rgba(255, 255, 255, 0.55);
+        --mr-text-muted: rgba(255, 255, 255, 0.3);
+
         position: fixed;
         top: 0;
         right: -400px;
         width: 380px;
         height: 100vh;
         z-index: 999999;
-        transition: right 0.35s cubic-bezier(.4,0,.2,1);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
         pointer-events: none;
       }
       .mr-overlay.mr-open {
@@ -396,13 +416,26 @@ const Overlay = {
       .mr-panel {
         width: 100%;
         height: 100%;
-        background: rgba(15, 15, 30, 0.92);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-left: 1px solid rgba(255,255,255,0.08);
+        background: var(--mr-bg);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border-left: 1px solid var(--mr-border);
         display: flex;
         flex-direction: column;
-        box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+        box-shadow: -12px 0 48px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Top gradient accent */
+      .mr-panel::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--mr-primary), #818cf8, transparent);
+        opacity: 0.6;
+        z-index: 1;
       }
 
       /* ========== HEADER ========== */
@@ -410,35 +443,51 @@ const Overlay = {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 14px 16px;
-        border-bottom: 1px solid rgba(255,255,255,0.07);
+        padding: 16px 18px 14px;
+        border-bottom: 1px solid var(--mr-border);
         flex-shrink: 0;
+        position: relative;
       }
       .mr-head-left {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+      }
+      .mr-head-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: var(--mr-primary-dim);
+        border: 1px solid rgba(167, 139, 250, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .mr-head-text {
+        display: flex;
+        flex-direction: column;
       }
       .mr-head-title {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 700;
-        color: #fff;
+        color: var(--mr-text);
         letter-spacing: -0.3px;
+        line-height: 1.2;
       }
-      .mr-head-count {
-        font-size: 11px;
-        color: #a78bfa;
-        background: rgba(167,139,250,0.12);
-        padding: 2px 8px;
-        border-radius: 10px;
+      .mr-head-sub {
+        font-size: 10px;
+        color: var(--mr-primary);
         font-weight: 600;
+        letter-spacing: 0.2px;
+        margin-top: 1px;
       }
       .mr-close-btn {
-        background: rgba(255,255,255,0.06);
-        border: none;
-        color: rgba(255,255,255,0.5);
-        width: 32px;
-        height: 32px;
+        background: var(--mr-surface);
+        border: 1px solid var(--mr-border);
+        color: var(--mr-text-muted);
+        width: 30px;
+        height: 30px;
         border-radius: 8px;
         cursor: pointer;
         display: flex;
@@ -447,8 +496,9 @@ const Overlay = {
         transition: all 0.2s;
       }
       .mr-close-btn:hover {
-        background: rgba(255,255,255,0.12);
-        color: #fff;
+        background: var(--mr-border-hover);
+        color: var(--mr-text);
+        transform: scale(1.05);
       }
 
       /* ========== CARDS CONTAINER ========== */
@@ -456,74 +506,77 @@ const Overlay = {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 8px 12px;
+        padding: 10px 14px;
         display: flex;
         flex-direction: column;
         gap: 6px;
       }
       .mr-cards::-webkit-scrollbar { width: 4px; }
       .mr-cards::-webkit-scrollbar-track { background: transparent; }
-      .mr-cards::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
-      .mr-cards::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+      .mr-cards::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+      .mr-cards::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
 
-      /* ========== CARD ========== */
+      /* ========== MOVIE CARD ========== */
       .mr-card {
         display: flex;
         align-items: stretch;
         gap: 12px;
-        padding: 10px;
+        padding: 10px 12px;
         border-radius: 10px;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.05);
+        background: var(--mr-surface);
+        border: 1px solid var(--mr-border);
         cursor: pointer;
-        transition: all 0.25s cubic-bezier(.4,0,.2,1);
-        animation: mr-slideIn 0.35s ease-out forwards;
-        animation-delay: var(--delay, 0ms);
-        opacity: 0;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: mr-cardIn 0.4s ease-out both;
+        animation-delay: calc(var(--i, 0) * 60ms);
         position: relative;
       }
       .mr-card:hover {
-        background: rgba(255,255,255,0.07);
-        border-color: rgba(167,139,250,0.25);
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(167, 139, 250, 0.2);
         transform: translateX(-3px);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
       }
-      @keyframes mr-slideIn {
-        from { opacity: 0; transform: translateX(30px); }
+      @keyframes mr-cardIn {
+        from { opacity: 0; transform: translateX(24px); }
         to { opacity: 1; transform: translateX(0); }
       }
 
       /* ========== POSTER ========== */
-      .mr-poster {
-        width: 56px;
-        min-height: 80px;
-        border-radius: 6px;
+      .mr-poster-wrap {
+        width: 54px;
+        min-height: 78px;
+        border-radius: 7px;
         overflow: hidden;
         flex-shrink: 0;
         position: relative;
-        background: rgba(255,255,255,0.05);
+        background: var(--mr-surface);
+        border: 1px solid var(--mr-border);
       }
-      .mr-poster img {
+      .mr-poster-img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
       }
-      .mr-rating {
+      .mr-rating-badge {
         position: absolute;
         bottom: 3px;
         left: 3px;
         font-size: 9px;
         font-weight: 700;
-        padding: 1px 5px;
-        border-radius: 4px;
+        padding: 2px 5px;
+        border-radius: 5px;
         color: #fff;
-        backdrop-filter: blur(6px);
-        letter-spacing: 0.3px;
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        letter-spacing: 0.2px;
       }
-      .mr-rating.high { background: rgba(16,185,129,0.85); }
-      .mr-rating.mid  { background: rgba(245,158,11,0.85); }
-      .mr-rating.low  { background: rgba(239,68,68,0.85); }
+      .mr-rating-badge.high { background: rgba(16, 185, 129, 0.85); }
+      .mr-rating-badge.mid  { background: rgba(245, 158, 11, 0.85); }
+      .mr-rating-badge.low  { background: rgba(239, 68, 68, 0.85); }
 
       /* ========== INFO ========== */
       .mr-info {
@@ -539,7 +592,7 @@ const Overlay = {
         margin: 0;
         font-size: 13px;
         font-weight: 600;
-        color: #f0f0f0;
+        color: var(--mr-text);
         line-height: 1.3;
         white-space: nowrap;
         overflow: hidden;
@@ -553,22 +606,24 @@ const Overlay = {
       }
       .mr-year {
         font-size: 11px;
-        color: rgba(255,255,255,0.45);
+        color: var(--mr-text-muted);
         font-weight: 500;
       }
       .mr-tag {
-        font-size: 10px;
+        font-size: 9px;
         padding: 1px 6px;
         border-radius: 4px;
-        background: rgba(167,139,250,0.12);
+        background: var(--mr-primary-dim);
         color: #c4b5fd;
-        font-weight: 500;
+        font-weight: 600;
         white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
       }
       .mr-why {
         margin: 0;
-        font-size: 11px;
-        color: rgba(255,255,255,0.35);
+        font-size: 10.5px;
+        color: var(--mr-text-muted);
         line-height: 1.3;
         white-space: nowrap;
         overflow: hidden;
@@ -582,10 +637,10 @@ const Overlay = {
         right: 8px;
         background: none;
         border: none;
-        color: rgba(255,255,255,0.25);
+        color: var(--mr-text-muted);
         cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
+        padding: 5px;
+        border-radius: 6px;
         transition: all 0.2s;
         display: flex;
         align-items: center;
@@ -593,22 +648,51 @@ const Overlay = {
         opacity: 0;
       }
       .mr-card:hover .mr-save { opacity: 1; }
-      .mr-save:hover { color: #f59e0b; background: rgba(245,158,11,0.1); }
-      .mr-save.mr-saved { color: #f59e0b; opacity: 1; }
+      .mr-save:hover {
+        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.1);
+        transform: scale(1.1);
+      }
+      .mr-save.mr-saved {
+        color: #f59e0b;
+        opacity: 1;
+      }
 
       /* ========== FOOTER ========== */
       .mr-foot {
-        padding: 10px 16px;
-        border-top: 1px solid rgba(255,255,255,0.05);
+        padding: 10px 18px;
+        border-top: 1px solid var(--mr-border);
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-shrink: 0;
+        background: rgba(0, 0, 0, 0.15);
       }
-      .mr-foot span {
+      .mr-foot-brand {
         font-size: 10px;
-        color: rgba(255,255,255,0.25);
+        color: var(--mr-text-muted);
         letter-spacing: 0.3px;
+      }
+      .mr-foot-shortcut {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .mr-foot-shortcut kbd {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1px 5px;
+        min-width: 18px;
+        height: 16px;
+        border-radius: 3px;
+        background: var(--mr-surface);
+        border: 1px solid var(--mr-border);
+        font-family: inherit;
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--mr-text-muted);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.03);
       }
 
       /* ========== EMPTY STATE ========== */
@@ -618,22 +702,55 @@ const Overlay = {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 40px 24px;
+        padding: 40px 28px;
         text-align: center;
       }
-      .mr-empty-icon { font-size: 40px; margin-bottom: 12px; }
-      .mr-empty p { color: rgba(255,255,255,0.7); font-size: 14px; margin: 0 0 6px; }
-      .mr-empty small { color: rgba(255,255,255,0.35); font-size: 12px; }
+      .mr-empty-visual {
+        margin-bottom: 16px;
+      }
+      .mr-empty-circle {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: var(--mr-primary-dim);
+        border: 1px solid rgba(167, 139, 250, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--mr-primary);
+      }
+      .mr-error-circle {
+        background: rgba(248, 113, 113, 0.08);
+        border-color: rgba(248, 113, 113, 0.12);
+        color: #f87171;
+      }
+      .mr-empty-title {
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+      .mr-empty-desc {
+        color: var(--mr-text-muted);
+        font-size: 12px;
+        line-height: 1.4;
+        margin: 0;
+        max-width: 240px;
+      }
 
       /* ========== SKELETON ========== */
-      .mr-skeleton-card { pointer-events: none; }
-      .mr-skeleton-card .mr-poster { min-height: 80px; }
+      .mr-skel { pointer-events: none; }
+      .mr-skel .mr-poster-wrap { min-height: 78px; border: none; }
       .mr-shimmer {
-        background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.04) 75%);
+        background: linear-gradient(90deg,
+          rgba(255,255,255,0.03) 25%,
+          rgba(255,255,255,0.08) 50%,
+          rgba(255,255,255,0.03) 75%
+        );
         background-size: 300% 100%;
-        animation: mr-shimmerAnim 1.8s ease-in-out infinite;
+        animation: mr-shimmerMove 1.8s ease-in-out infinite;
       }
-      @keyframes mr-shimmerAnim {
+      @keyframes mr-shimmerMove {
         0% { background-position: 300% 0; }
         100% { background-position: -300% 0; }
       }
@@ -641,14 +758,14 @@ const Overlay = {
       /* ========== RESPONSIVE ========== */
       @media (max-width: 500px) {
         .mr-overlay { width: 100%; right: -100%; }
-        .mr-trigger { bottom: 16px; right: 16px; width: 44px; height: 44px; }
+        .mr-trigger { bottom: 16px; right: 16px; width: 44px; height: 44px; border-radius: 12px; }
       }
 
       /* ========== FOCUS ========== */
       .mr-close-btn:focus-visible,
       .mr-save:focus-visible,
       .mr-trigger:focus-visible {
-        outline: 2px solid rgba(167,139,250,0.6);
+        outline: 2px solid rgba(167, 139, 250, 0.5);
         outline-offset: 2px;
       }
     `;
