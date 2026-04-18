@@ -6,6 +6,7 @@
 
 // Global state
 let lastTrackedMovie = null;
+let lastTrackedMovieId = null;
 let movieTitleObserver = null;
 let extensionEnabled = true;
 let debounceTimer = null;
@@ -90,7 +91,7 @@ function setupMovieDetection() {
           handleMovieDetected(title);
         }
       }
-    }, 800);
+    }, 300);
   });
 
   window.addEventListener('popstate', () => {
@@ -102,7 +103,7 @@ function setupMovieDetection() {
           handleMovieDetected(title);
         }
       }
-    }, 800);
+    }, 300);
   });
 }
 
@@ -113,10 +114,13 @@ function setupMovieDetection() {
 async function handleMovieDetected(movieTitle) {
   try {
     console.log('[Content] Movie detected:', movieTitle);
-    lastTrackedMovie = movieTitle;
 
     // Fetch movie details from TMDb
     const movieData = await API.searchMovie(movieTitle);
+    if (movieData && lastTrackedMovieId && movieData.id === lastTrackedMovieId) {
+      console.log('[Content] Same movie detected, skipping redundant refresh:', movieTitle);
+      return;
+    }
 
     if (!movieData) {
       console.warn('[Content] Could not find movie details:', movieTitle);
@@ -142,6 +146,8 @@ async function handleMovieDetected(movieTitle) {
 
     // Store current movie data for playback detection
     currentMovieData = movieWithPlatform;
+    lastTrackedMovie = movieTitle;
+    lastTrackedMovieId = movieData.id;
 
     // Show overlay with recommendations
     if (extensionEnabled) {
