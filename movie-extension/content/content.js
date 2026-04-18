@@ -269,7 +269,7 @@ async function showPlatformSpecificRecommendations(movieData, platform) {
 
     // Filter for high-rated movies and limit
     const highRatedMovies = similarMovies
-      .filter(movie => movie.rating >= 6.0)
+      .filter(movie => movie.rating >= 6.0 && movie.id !== movieData.id && movie.title.trim().toLowerCase() !== movieData.title.trim().toLowerCase())
       .slice(0, 4); // Show 4 platform-specific recommendations
 
     // Create platform-specific recommendations

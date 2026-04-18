@@ -279,6 +279,7 @@ const Recommender = {
     try {
       const scoreMap = new Map();
       const historyTitles = new Set(history.map(h => h.title.toLowerCase()));
+      const historyIds = new Set(history.map(h => `${h.tmdbId || h.id}`));
 
       // Process recent movie recommendations (50% weight)
       (recommendations.fromRecent || []).forEach(movie => {
