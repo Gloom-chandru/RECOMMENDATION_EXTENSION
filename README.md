@@ -109,7 +109,7 @@
 
   ✨ Movie Detection
      • Auto-detects when you're on movie pages
-     • Works on Hotstar and Prime Video
+     • Works on Hotstar, Prime Video, and Netflix
      • Saves to watch history automatically
 
   ✨ Smart Recommendations
@@ -120,6 +120,12 @@
      • Language-aware (similar dubbed languages)
      • Shows 6 personalized recommendations
      • Explains why each is recommended
+
+  ✨ Platform-Specific Suggestions
+     • When watching a movie, shows similar movies available on the same platform
+     • Auto-detects playback start
+     • Context-aware recommendations (e.g., "Similar to Joe - Available on Hotstar")
+     • Helps discover content within the same streaming service
 
   ✨ Beautiful UI
      • Modern dark theme (slides in from right)

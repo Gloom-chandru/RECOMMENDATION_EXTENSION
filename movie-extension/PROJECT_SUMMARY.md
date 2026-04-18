@@ -11,8 +11,9 @@ Complete, production-ready Chrome Extension for tracking movie browsing and prov
 ### ✅ Complete Feature Set
 
 **Core Features Implemented:**
-- ✅ Cross-platform movie detection (Hotstar, Prime Video)
-- ✅ Hybrid recommendation engine (60% recent + 40% genre)
+- ✅ Cross-platform movie detection (Hotstar, Prime Video, Netflix)
+- ✅ Enhanced hybrid recommendation engine (50% recent + 30% genre + 20% language)
+- ✅ Platform-specific suggestions during playback
 - ✅ Real-time movie tracking with watch history
 - ✅ Beautiful floating recommendation overlay
 - ✅ Bookmarks/Save for Later functionality
@@ -138,6 +139,25 @@ movie-extension/
 5. Fetch high-rated movies in preferred languages
 6. Merge, deduplicate, score by rating + relevance
 7. Return top 6 with detailed explanations
+
+### 3. Platform-Specific Suggestions
+**Playback-Aware Recommendations:**
+- Detects when user starts watching a movie
+- Shows similar movies available on the same platform
+- Context-aware explanations ("Similar to [Movie] - Available on [Platform]")
+- Helps users discover content within their current streaming service
+
+**Supported Platforms:**
+- Hotstar
+- Prime Video  
+- Netflix
+
+**Process:**
+1. Monitor video playback events
+2. Detect when user starts watching
+3. Fetch similar movies for current title
+4. Display platform-specific recommendations
+5. Focus on movies likely available on same service
 
 ### 3. Data Management
 **Stored in chrome.storage.local:**
