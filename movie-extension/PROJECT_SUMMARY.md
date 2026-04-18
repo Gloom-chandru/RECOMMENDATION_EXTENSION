@@ -120,17 +120,24 @@ movie-extension/
 - Debounced to prevent duplicate detections
 
 ### 2. Smart Recommendations
-**Hybrid Algorithm:**
-- 60% weight: Recently watched movies (last 3)
-- 40% weight: Favorite genres (top 3)
+**Enhanced Hybrid Algorithm:**
+- 50% weight: Recently watched movies (last 3)
+- 30% weight: Favorite genres (top 3)
+- 20% weight: Language preferences (original + dubbed)
+
+**Features:**
+- Language-aware recommendations (similar dubbed languages)
+- High-rating prioritization (IMDb/TMDb rating ≥ 6.0)
+- Multi-source scoring with human explanations
 
 **Process:**
-1. Get user's watch history
-2. Extract top genres
-3. Fetch similar movies for recent films
-4. Fetch movies in favorite genres
-5. Merge, deduplicate, score, sort
-6. Return top 6 with explanations
+1. Get user's watch history with language data
+2. Extract top genres and preferred languages
+3. Fetch similar high-rated movies for recent films
+4. Fetch high-rated movies in favorite genres
+5. Fetch high-rated movies in preferred languages
+6. Merge, deduplicate, score by rating + relevance
+7. Return top 6 with detailed explanations
 
 ### 3. Data Management
 **Stored in chrome.storage.local:**

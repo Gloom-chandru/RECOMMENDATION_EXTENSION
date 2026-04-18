@@ -113,8 +113,11 @@
      • Saves to watch history automatically
 
   ✨ Smart Recommendations
-     • Based on movies you've watched (60% weight)
-     • Based on your favorite genres (40% weight)
+     • Based on movies you've watched (50% weight)
+     • Based on your favorite genres (30% weight)
+     • Based on language preferences (20% weight)
+     • Prioritizes high-rated movies (IMDb ≥ 6.0)
+     • Language-aware (similar dubbed languages)
      • Shows 6 personalized recommendations
      • Explains why each is recommended
 
