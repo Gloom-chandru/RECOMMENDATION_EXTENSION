@@ -198,6 +198,37 @@ const Recommender = {
   },
 
   /**
+   * Get human-readable language name
+   * @param {string} langCode
+   * @returns {string}
+   */
+  _getLanguageName(langCode) {
+    const languageNames = {
+      'en': 'English',
+      'hi': 'Hindi',
+      'te': 'Telugu',
+      'ta': 'Tamil',
+      'kn': 'Kannada',
+      'ml': 'Malayalam',
+      'bn': 'Bengali',
+      'mr': 'Marathi',
+      'gu': 'Gujarati',
+      'pa': 'Punjabi',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'it': 'Italian',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+      'zh': 'Chinese',
+      'ru': 'Russian',
+      'ar': 'Arabic'
+    };
+    
+    return languageNames[langCode] || langCode.toUpperCase();
+  },
+
+  /**
    * Map genre names to TMDb genre IDs
    * Extended mapping for common genres
    * @param {string} genreName

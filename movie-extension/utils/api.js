@@ -281,6 +281,56 @@ const API = {
   },
 
   /**
+   * Get movies by original language
+   * @param {string} languageCode - ISO 639-1 language code (e.g., 'hi', 'en', 'te')
+   * @param {number} page
+   * @returns {Promise<Array|null>}
+   */
+  async getMoviesByLanguage(languageCode, page = 1) {
+    if (!languageCode) return null;
+
+    try {
+      const cacheKey = `${languageCode}_page_${page}`;
+      const cached = await Cache.get('language_movies', cacheKey);
+      if (cached) {
+        return cached;
+      }
+
+      // Use discover endpoint to filter by original language
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_original_language=${languageCode}&sort_by=vote_average.desc&vote_count.gte=100&page=${page}`;
+
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      if (!data.results || data.results.length === 0) {
+        return [];
+      }
+
+      const movies = data.results
+        .filter(movie => movie.vote_average >= 6.0) // Only high-rated movies
+        .slice(0, 10) // Limit to top 10
+        .map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          rating: movie.vote_average,
+          description: movie.overview,
+          genres: movie.genre_ids || [],
+          posterPath: movie.poster_path,
+          backdropPath: movie.backdrop_path,
+          popularity: movie.popularity,
+          originalLanguage: movie.original_language
+        }));
+
+      await Cache.set('language_movies', cacheKey, movies);
+      return movies;
+    } catch (error) {
+      console.error('[API] Error getting movies by language:', error);
+      return null;
+    }
+  },
+
+  /**
    * Get poster URL
    * @param {string} posterPath
    * @param {string} size
