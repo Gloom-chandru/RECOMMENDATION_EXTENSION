@@ -74,6 +74,8 @@ const Storage = {
         genres: movie.genres || [],
         tmdbId: movie.id,
         posterPath: movie.posterPath,
+        originalLanguage: movie.originalLanguage || null,
+        spokenLanguages: Array.isArray(movie.spokenLanguages) ? movie.spokenLanguages : [],
         timestamp: Date.now(),
         platform: movie.platform || 'unknown',
         rating: movie.rating || 0
