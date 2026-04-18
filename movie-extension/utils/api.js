@@ -132,7 +132,9 @@ const API = {
         backdropPath: data.backdrop_path,
         runtime: data.runtime,
         budget: data.budget,
-        revenue: data.revenue
+        revenue: data.revenue,
+        originalLanguage: data.original_language,
+        spokenLanguages: data.spoken_languages?.map(lang => lang.iso_639_1) || []
       };
 
       await Cache.set('movie_details', movieId.toString(), movieDetails);

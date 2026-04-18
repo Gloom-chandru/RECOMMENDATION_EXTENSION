@@ -123,10 +123,12 @@ async function handleMovieDetected(movieTitle) {
       fullDetails = await API.getMovieDetails(movieData.id);
     }
 
-    // Add to history with full genre names
+    // Add to history with full genre names and language info
     const movieWithPlatform = {
       ...movieData,
       genres: fullDetails?.genres || movieData.genres,
+      originalLanguage: fullDetails?.originalLanguage || null,
+      spokenLanguages: fullDetails?.spokenLanguages || [],
       platform: PlatformDetectors.getCurrentPlatform()
     };
 

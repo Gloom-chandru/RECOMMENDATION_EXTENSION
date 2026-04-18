@@ -10,11 +10,13 @@
 
 const Recommender = {
   // Configuration
-  RECENT_MOVIE_WEIGHT: 0.6,
-  GENRE_WEIGHT: 0.4,
+  RECENT_MOVIE_WEIGHT: 0.5,
+  GENRE_WEIGHT: 0.3,
+  LANGUAGE_WEIGHT: 0.2,
   RECENT_MOVIE_COUNT: 3,
   TOP_GENRE_COUNT: 3,
   TARGET_RECOMMENDATION_COUNT: 6,
+  MIN_RATING_THRESHOLD: 6.0, // Only recommend movies with rating >= 6.0
 
   /**
    * Get personalized recommendations
@@ -32,7 +34,8 @@ const Recommender = {
 
       const recommendations = {
         fromRecent: await this._getRecommendationsFromRecent(history),
-        fromGenres: await this._getRecommendationsFromGenres()
+        fromGenres: await this._getRecommendationsFromGenres(),
+        fromLanguages: await this._getRecommendationsFromLanguages(history)
       };
 
       // Merge and score recommendations
@@ -122,6 +125,74 @@ const Recommender = {
       return allByGenre;
     } catch (error) {
       console.error('[Recommender] Error getting genre recommendations:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get recommendations based on language preferences (20% weight)
+   * Finds movies in similar languages (including dubbed versions)
+   * @param {Array} history
+   * @returns {Promise<Array>}
+   */
+  async _getRecommendationsFromLanguages(history) {
+    try {
+      // Get user's preferred languages from watch history
+      const languageCount = {};
+      
+      history.forEach(movie => {
+        const lang = movie.originalLanguage;
+        if (lang) {
+          languageCount[lang] = (languageCount[lang] || 0) + 1;
+        }
+        
+        // Also count spoken languages
+        if (movie.spokenLanguages && Array.isArray(movie.spokenLanguages)) {
+          movie.spokenLanguages.forEach(lang => {
+            languageCount[lang] = (languageCount[lang] || 0) + 0.5; // Less weight for dubbed
+          });
+        }
+      });
+
+      // Get top languages
+      const topLanguages = Object.entries(languageCount)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 2) // Top 2 languages
+        .map(([lang]) => lang);
+
+      if (topLanguages.length === 0) {
+        return [];
+      }
+
+      const allByLanguage = [];
+
+      for (const language of topLanguages) {
+        try {
+          // Get popular movies in this language
+          const movies = await API.getMoviesByLanguage(language);
+          
+          if (movies && movies.length > 0) {
+            const isOriginal = languageCount[language] >= 1; // Prefer original language
+            
+            movies.forEach(m => {
+              allByLanguage.push({
+                ...m,
+                source: isOriginal ? 
+                  `Because you watch movies in ${this._getLanguageName(language)}` :
+                  `Available dubbed in ${this._getLanguageName(language)}`,
+                weight: isOriginal ? 0.8 : 0.6,
+                reason: 'language'
+              });
+            });
+          }
+        } catch (error) {
+          console.warn(`[Recommender] Error getting movies for language ${language}:`, error);
+        }
+      }
+
+      return allByLanguage;
+    } catch (error) {
+      console.error('[Recommender] Error getting language recommendations:', error);
       return [];
     }
   },
