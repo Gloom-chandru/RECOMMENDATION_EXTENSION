@@ -171,7 +171,7 @@ const API = {
       }
 
       const movies = data.results
-        .filter(movie => movie.vote_average >= 6.0) // Only high-rated movies
+        .filter(movie => movie.vote_average >= 6.0 && movie.id !== movieId) // Exclude the current movie
         .slice(0, 10) // Limit results
         .map(movie => ({
           id: movie.id,

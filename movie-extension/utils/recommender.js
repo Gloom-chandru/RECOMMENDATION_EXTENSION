@@ -285,8 +285,8 @@ const Recommender = {
       (recommendations.fromRecent || []).forEach(movie => {
         const key = `${movie.id}`;
         
-        // Skip if already in history
-        if (historyTitles.has(movie.title.toLowerCase())) {
+        // Skip if missing ID, already in history, or same movie by ID
+        if (!movie.id || historyIds.has(`${movie.id}`) || historyTitles.has(movie.title.toLowerCase())) {
           return;
         }
 
@@ -306,8 +306,8 @@ const Recommender = {
       (recommendations.fromGenres || []).forEach(movie => {
         const key = `${movie.id}`;
         
-        // Skip if already in history
-        if (historyTitles.has(movie.title.toLowerCase())) {
+        // Skip if missing ID, already in history, or same movie by ID
+        if (!movie.id || historyIds.has(`${movie.id}`) || historyTitles.has(movie.title.toLowerCase())) {
           return;
         }
 
@@ -327,8 +327,8 @@ const Recommender = {
       (recommendations.fromLanguages || []).forEach(movie => {
         const key = `${movie.id}`;
         
-        // Skip if already in history
-        if (historyTitles.has(movie.title.toLowerCase())) {
+        // Skip if missing ID, already in history, or same movie by ID
+        if (!movie.id || historyIds.has(`${movie.id}`) || historyTitles.has(movie.title.toLowerCase())) {
           return;
         }
 
