@@ -4,8 +4,14 @@
  * No machine learning - pure rule-based logic
  * 
  * Weighting:
- * - 60% Recent movies (last 3 watched)
- * - 40% Genre frequency (top genres)
+ * - 50% Recent movies (last 3 watched)
+ * - 30% Genre frequency (top genres)
+ * - 20% Language similarity (original + dubbed)
+ * 
+ * Features:
+ * - Language-aware recommendations (similar dubbed languages)
+ * - High-rating prioritization (IMDb/TMDb rating >= 6.0)
+ * - Multi-source scoring with explanations
  */
 
 const Recommender = {
@@ -274,7 +280,7 @@ const Recommender = {
       const scoreMap = new Map();
       const historyTitles = new Set(history.map(h => h.title.toLowerCase()));
 
-      // Process recent movie recommendations (60% weight)
+      // Process recent movie recommendations (50% weight)
       (recommendations.fromRecent || []).forEach(movie => {
         const key = `${movie.id}`;
         
@@ -295,7 +301,7 @@ const Recommender = {
         scoreMap.set(key, existing);
       });
 
-      // Process genre recommendations (40% weight)
+      // Process genre recommendations (30% weight)
       (recommendations.fromGenres || []).forEach(movie => {
         const key = `${movie.id}`;
         
@@ -316,9 +322,39 @@ const Recommender = {
         scoreMap.set(key, existing);
       });
 
-      // Sort by score and prepare output
+      // Process language recommendations (20% weight)
+      (recommendations.fromLanguages || []).forEach(movie => {
+        const key = `${movie.id}`;
+        
+        // Skip if already in history
+        if (historyTitles.has(movie.title.toLowerCase())) {
+          return;
+        }
+
+        const existing = scoreMap.get(key) || {
+          ...movie,
+          score: 0,
+          sources: []
+        };
+
+        existing.score += (this.LANGUAGE_WEIGHT * movie.weight * movie.rating / 10);
+        existing.sources.push(movie.source);
+
+        scoreMap.set(key, existing);
+      });
+
+      // Sort by score with rating boost and prepare output
       const sorted = Array.from(scoreMap.values())
-        .sort((a, b) => b.score - a.score)
+        .filter(movie => movie.rating >= this.MIN_RATING_THRESHOLD) // Only high-rated movies
+        .sort((a, b) => {
+          // Primary sort: by score
+          const scoreDiff = b.score - a.score;
+          if (Math.abs(scoreDiff) > 0.01) {
+            return scoreDiff;
+          }
+          // Secondary sort: by rating (higher rating first)
+          return b.rating - a.rating;
+        })
         .map(movie => ({
           id: movie.id,
           title: movie.title,
