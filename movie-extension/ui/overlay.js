@@ -68,11 +68,37 @@ const Overlay = {
         }
       }
 
-      this._render();
+      this._render(false); // Regular recommendations
       this._openPanel();
       this._updateBadge(this.currentRecommendations.length);
     } catch (error) {
       console.error('[Overlay] Error:', error);
+      this._renderError();
+      this._openPanel();
+    }
+  },
+
+  /**
+   * Show overlay with platform-specific recommendations
+   * @param {Array} recommendations
+   */
+  showPlatformSpecific(recommendations = []) {
+    try {
+      if (!this.container) this.init();
+
+      if (recommendations.length === 0) {
+        console.log('[Overlay] No platform-specific recommendations to show');
+        return;
+      }
+
+      this.currentRecommendations = recommendations;
+      this._render(true); // Pass true to indicate platform-specific
+      this._openPanel();
+      this._updateBadge(recommendations.length);
+
+      console.log('[Overlay] Showing platform-specific recommendations:', recommendations.length);
+    } catch (error) {
+      console.error('[Overlay] Error showing platform-specific:', error);
       this._renderError();
       this._openPanel();
     }
@@ -141,15 +167,19 @@ const Overlay = {
 
   /**
    * Main render — card list
+   * @param {boolean} isPlatformSpecific
    */
-  _render() {
+  _render(isPlatformSpecific = false) {
     const recs = this.currentRecommendations;
+    const headerText = isPlatformSpecific 
+      ? `Available on this platform`
+      : `${recs.length} pick${recs.length !== 1 ? 's' : ''} for you`;
 
     this.container.innerHTML = `
       <div class="mr-panel">
-        ${this._buildHeader(`${recs.length} pick${recs.length !== 1 ? 's' : ''} for you`)}
+        ${this._buildHeader(headerText)}
         <div class="mr-cards">
-          ${recs.map((m, i) => this._renderCard(m, i)).join('')}
+          ${recs.map((m, i) => this._renderCard(m, i, isPlatformSpecific)).join('')}
         </div>
         <div class="mr-foot">
           <span class="mr-foot-brand">Powered by TMDb</span>
@@ -163,8 +193,11 @@ const Overlay = {
 
   /**
    * Movie card — horizontal layout
+   * @param {Object} movie
+   * @param {number} index
+   * @param {boolean} isPlatformSpecific
    */
-  _renderCard(movie, index) {
+  _renderCard(movie, index, isPlatformSpecific = false) {
     const poster = API.getPosterUrl(movie.posterPath, 'w185');
     const rating = movie.rating ? movie.rating.toFixed(1) : '—';
     const year = movie.releaseDate ? movie.releaseDate.split('-')[0] : '';

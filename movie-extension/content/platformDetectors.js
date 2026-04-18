@@ -14,6 +14,7 @@ const PlatformDetectors = {
     
     if (hostname.includes('hotstar.com')) return 'hotstar';
     if (hostname.includes('primevideo.com')) return 'primevideo';
+    if (hostname.includes('netflix.com')) return 'netflix';
     
     return null;
   },
@@ -37,6 +38,11 @@ const PlatformDetectors = {
         // Prime Video: /detail/<id>
         const pathMatch = /\/detail\//.test(window.location.pathname);
         return pathMatch && this._hasMovieElements('primevideo');
+      },
+      netflix: () => {
+        // Netflix: /title/<id> or watch pages
+        const pathMatch = /\/(title|watch)\//.test(window.location.pathname);
+        return pathMatch && this._hasMovieElements('netflix');
       }
     };
 
@@ -59,6 +65,12 @@ const PlatformDetectors = {
         // Check for common Prime Video elements
         return !!document.querySelector('[data-a-target="hero-atf-title"]') ||
                !!document.querySelector('h1');
+      },
+      netflix: () => {
+        // Check for common Netflix elements
+        return !!document.querySelector('[data-uia="hero-title"]') ||
+               !!document.querySelector('h1') ||
+               !!document.querySelector('.title-info h1');
       }
     };
 
@@ -112,6 +124,27 @@ const PlatformDetectors = {
         }
 
         return null;
+      },
+
+      netflix: () => {
+        const selectors = [
+          '[data-uia="hero-title"]',
+          '.title-info h1',
+          'h1[data-uia]',
+          '.previewModal--player-titleTreatment h1',
+          'h1:not(.logo):not(.navbar-brand)'
+        ];
+
+        for (const selector of selectors) {
+          const element = document.querySelector(selector);
+          if (element?.textContent?.trim()) {
+            return element.textContent.trim();
+          }
+        }
+
+        // Fallback: extract from URL
+        const match = window.location.pathname.match(/\/title\/(\d+)/);
+        return match ? `Title ${match[1]}` : null;
       }
     };
 

@@ -15,6 +15,7 @@
   "host_permissions": [
     "https://www.hotstar.com/*",
     "https://www.primevideo.com/*",
+    "https://www.netflix.com/*",
     "https://api.themoviedb.org/*"
   ],
   
@@ -31,7 +32,8 @@
     {
       "matches": [
         "https://www.hotstar.com/*",
-        "https://www.primevideo.com/*"
+        "https://www.primevideo.com/*",
+        "https://www.netflix.com/*"
       ],
       "js": [
         "utils/cache.js",

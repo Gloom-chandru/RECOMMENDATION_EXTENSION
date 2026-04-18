@@ -9,6 +9,9 @@ let lastTrackedMovie = null;
 let movieTitleObserver = null;
 let extensionEnabled = true;
 let debounceTimer = null;
+let playbackObserver = null;
+let currentMovieData = null;
+let platformSpecificRecommendations = null;
 
 /**
  * Initialize content script
@@ -42,6 +45,9 @@ async function init() {
 
     // Set up movie detection
     setupMovieDetection();
+
+    // Set up playback detection for platform-specific recommendations
+    setupPlaybackDetection();
 
     // Listen for settings changes
     chrome.storage.onChanged.addListener(handleStorageChange);
@@ -134,6 +140,9 @@ async function handleMovieDetected(movieTitle) {
 
     await Storage.addToHistory(movieWithPlatform);
 
+    // Store current movie data for playback detection
+    currentMovieData = movieWithPlatform;
+
     // Show overlay with recommendations
     if (extensionEnabled) {
       Overlay.show();
@@ -141,6 +150,162 @@ async function handleMovieDetected(movieTitle) {
   } catch (error) {
     console.error('[Content] Error handling movie detection:', error);
   }
+}
+
+/**
+ * Set up playback detection for platform-specific recommendations
+ */
+function setupPlaybackDetection() {
+  const platform = PlatformDetectors.getCurrentPlatform();
+  
+  if (!platform) return;
+
+  // Set up video element observers based on platform
+  setupVideoObservers(platform);
+}
+
+/**
+ * Set up video element observers for different platforms
+ * @param {string} platform
+ */
+function setupVideoObservers(platform) {
+  let videoSelectors = [];
+
+  switch (platform) {
+    case 'hotstar':
+      videoSelectors = ['video', '.player-video', '[data-testid="player-video"]'];
+      break;
+    case 'primevideo':
+      videoSelectors = ['video', '.renderer', '[data-testid="video-player"]'];
+      break;
+    case 'netflix':
+      videoSelectors = ['video', '.VideoContainer video', '.player-video'];
+      break;
+    default:
+      videoSelectors = ['video'];
+  }
+
+  // Observe for video elements
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          // Check if it's a video element
+          if (node.tagName === 'VIDEO') {
+            setupVideoPlaybackListener(node, platform);
+          }
+          // Check for video elements in added subtree
+          const videos = node.querySelectorAll ? node.querySelectorAll('video') : [];
+          videos.forEach(video => setupVideoPlaybackListener(video, platform));
+        }
+      });
+    });
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+
+  // Also check for existing video elements
+  videoSelectors.forEach(selector => {
+    const videos = document.querySelectorAll(selector);
+    videos.forEach(video => setupVideoPlaybackListener(video, platform));
+  });
+
+  playbackObserver = observer;
+}
+
+/**
+ * Set up playback listener for a video element
+ * @param {HTMLVideoElement} video
+ * @param {string} platform
+ */
+function setupVideoPlaybackListener(video, platform) {
+  if (video.hasPlaybackListener) return;
+  video.hasPlaybackListener = true;
+
+  let hasStartedPlayback = false;
+
+  const handlePlay = async () => {
+    if (hasStartedPlayback || !currentMovieData) return;
+    hasStartedPlayback = true;
+
+    console.log('[Content] User started watching:', currentMovieData.title, 'on', platform);
+
+    // Show platform-specific recommendations
+    await showPlatformSpecificRecommendations(currentMovieData, platform);
+  };
+
+  video.addEventListener('play', handlePlay);
+  video.addEventListener('playing', handlePlay);
+
+  // Also listen for timeupdate as backup
+  video.addEventListener('timeupdate', () => {
+    if (!hasStartedPlayback && video.currentTime > 5 && currentMovieData) {
+      hasStartedPlayback = true;
+      console.log('[Content] User started watching (timeupdate):', currentMovieData.title, 'on', platform);
+      showPlatformSpecificRecommendations(currentMovieData, platform);
+    }
+  });
+}
+
+/**
+ * Show platform-specific recommendations for similar movies
+ * @param {Object} movieData
+ * @param {string} platform
+ */
+async function showPlatformSpecificRecommendations(movieData, platform) {
+  try {
+    console.log('[Content] Getting platform-specific recommendations for:', movieData.title, 'on', platform);
+
+    // Get similar movies
+    const similarMovies = await API.getSimilarMovies(movieData.id);
+
+    if (!similarMovies || similarMovies.length === 0) {
+      console.log('[Content] No similar movies found');
+      return;
+    }
+
+    // Filter for high-rated movies and limit
+    const highRatedMovies = similarMovies
+      .filter(movie => movie.rating >= 6.0)
+      .slice(0, 4); // Show 4 platform-specific recommendations
+
+    // Create platform-specific recommendations
+    const platformRecommendations = highRatedMovies.map(movie => ({
+      ...movie,
+      explanation: `Similar to "${movieData.title}" - Available on ${getPlatformDisplayName(platform)}`,
+      platformSpecific: true,
+      currentPlatform: platform
+    }));
+
+    platformSpecificRecommendations = platformRecommendations;
+
+    // Show overlay with platform-specific recommendations
+    if (extensionEnabled) {
+      Overlay.showPlatformSpecific(platformRecommendations);
+    }
+
+    console.log('[Content] Showing', platformRecommendations.length, 'platform-specific recommendations');
+
+  } catch (error) {
+    console.error('[Content] Error showing platform-specific recommendations:', error);
+  }
+}
+
+/**
+ * Get display name for platform
+ * @param {string} platform
+ * @returns {string}
+ */
+function getPlatformDisplayName(platform) {
+  const names = {
+    'hotstar': 'Hotstar',
+    'primevideo': 'Prime Video',
+    'netflix': 'Netflix'
+  };
+  return names[platform] || platform;
 }
 
 /**
