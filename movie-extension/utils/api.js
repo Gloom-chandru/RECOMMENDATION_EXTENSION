@@ -170,17 +170,20 @@ const API = {
         return [];
       }
 
-      const movies = data.results.map(movie => ({
-        id: movie.id,
-        title: movie.title,
-        releaseDate: movie.release_date,
-        rating: movie.vote_average,
-        description: movie.overview,
-        genres: movie.genre_ids || [],
-        posterPath: movie.poster_path,
-        backdropPath: movie.backdrop_path,
-        popularity: movie.popularity
-      }));
+      const movies = data.results
+        .filter(movie => movie.vote_average >= 6.0) // Only high-rated movies
+        .slice(0, 10) // Limit results
+        .map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          rating: movie.vote_average,
+          description: movie.overview,
+          genres: movie.genre_ids || [],
+          posterPath: movie.poster_path,
+          backdropPath: movie.backdrop_path,
+          popularity: movie.popularity
+        }));
 
       await Cache.set('similar_movies', cacheKey, movies);
       return movies;
@@ -251,7 +254,7 @@ const API = {
         return cached;
       }
 
-      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&sort_by=popularity.desc&page=${page}`;
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&sort_by=vote_average.desc&vote_count.gte=100&page=${page}`;
       
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
@@ -260,17 +263,20 @@ const API = {
         return [];
       }
 
-      const movies = data.results.map(movie => ({
-        id: movie.id,
-        title: movie.title,
-        releaseDate: movie.release_date,
-        rating: movie.vote_average,
-        description: movie.overview,
-        genres: movie.genre_ids || [],
-        posterPath: movie.poster_path,
-        backdropPath: movie.backdrop_path,
-        popularity: movie.popularity
-      }));
+      const movies = data.results
+        .filter(movie => movie.vote_average >= 6.0) // Only high-rated movies
+        .slice(0, 10) // Limit results
+        .map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          rating: movie.vote_average,
+          description: movie.overview,
+          genres: movie.genre_ids || [],
+          posterPath: movie.poster_path,
+          backdropPath: movie.backdrop_path,
+          popularity: movie.popularity
+        }));
 
       await Cache.set('genre_movies', cacheKey, movies);
       return movies;
