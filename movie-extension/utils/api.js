@@ -198,7 +198,7 @@ const API = {
         return cached;
       }
 
-      const url = ${this.BASE_URL}/discover/movie?api_key=&language=en-US&sort_by=popularity.desc&page=;
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&sort_by=popularity.desc&page=${page}`;
       
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
@@ -242,7 +242,7 @@ const API = {
         return cached;
       }
       
-      const url = ${this.BASE_URL}/movie/popular?api_key=&language=en-US&page=;
+      const url = `${this.BASE_URL}/movie/popular?api_key=${this.API_KEY}&language=en-US&page=${page}`;
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
       
