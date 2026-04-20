@@ -173,7 +173,7 @@ const Recommender = {
         for (const language of topLanguages) {
           try {
             // Get popular movies in this language
-            const movies = await API.getMoviesByLanguage(language);
+            const movies = await API.getMoviesByLanguage("diverse");
             
             if (movies && movies.length > 0) {
               const isOriginal = languageCount[language] >= 1; // Prefer original language
@@ -437,7 +437,7 @@ const Recommender = {
       }
 
       // Use popular endpoint as fallback
-      const url = `${API.BASE_URL}/movie/popular?api_key=${API.API_KEY}&language=en-US&region=IN`;
+      const url = `${API.BASE_URL}/movie/popular?api_key=${API.API_KEY}&language=en-US&region=KR`;
       const response = await API._fetchWithRetry(url);
       const data = await response.json();
 

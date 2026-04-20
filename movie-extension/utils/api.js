@@ -303,7 +303,7 @@ const API = {
       }
 
       // Use discover endpoint to filter by original language
-      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&sort_by=popularity.desc&page=${page}`;
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&region=KR&sort_by=popularity.desc&page=${page}`;
 
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
@@ -342,6 +342,57 @@ const API = {
    * @param {string} size
    * @returns {string}
    */
+
+  /**
+   * Get diverse popular movies from multiple regions
+   * @returns {Promise<Array>}
+   */
+  async getDiverseMovies() {
+    try {
+      const regions = ['US', 'IN', 'KR', 'FR', 'JP', 'ES', 'DE'];
+      const allMovies = [];
+      
+      for (const region of regions.slice(0, 3)) { // Get from 3 regions
+        try {
+          const url = ${this.BASE_URL}/movie/popular?api_key=&language=en-US&region=&page=1;
+          const response = await this._fetchWithRetry(url);
+          const data = await response.json();
+          
+          if (data.results) {
+            const regionMovies = data.results
+              .filter(movie => movie.vote_average >= 5.0) // Lower threshold for diversity
+              .slice(0, 5) // 5 movies per region
+              .map(movie => ({
+                id: movie.id,
+                title: movie.title,
+                releaseDate: movie.release_date,
+                rating: movie.vote_average,
+                description: movie.overview,
+                genres: movie.genre_ids || [],
+                posterPath: movie.poster_path,
+                backdropPath: movie.backdrop_path,
+                popularity: movie.popularity,
+                originalLanguage: movie.original_language
+              }));
+            allMovies.push(...regionMovies);
+          }
+        } catch (error) {
+          console.warn(Error fetching movies for region :, error);
+        }
+      }
+      
+      // Remove duplicates and return
+      const uniqueMovies = allMovies.filter((movie, index, self) => 
+        index === self.findIndex(m => m.id === movie.id)
+      );
+      
+      return uniqueMovies.slice(0, 20);
+    } catch (error) {
+      console.error('[API] Error getting diverse movies:', error);
+      return [];
+    }
+  },
+
   getPosterUrl(posterPath, size = 'w342') {
     if (!posterPath) {
       return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 342 513'%3E%3Crect fill='%23444' width='342' height='513'/%3E%3Ctext x='50%25' y='50%25' font-size='24' fill='%23fff' text-anchor='middle' dy='.3em'%3ENo Image%3C/text%3E%3C/svg%3E`;
