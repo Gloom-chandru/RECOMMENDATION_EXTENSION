@@ -254,7 +254,7 @@ const API = {
         return cached;
       }
 
-      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&sort_by=popularity.desc&page=${page}`;
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&region=KR&sort_by=popularity.desc&page=${page}`;
       
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
@@ -389,6 +389,52 @@ const API = {
       return uniqueMovies.slice(0, 20);
     } catch (error) {
       console.error('[API] Error getting diverse movies:', error);
+      return [];
+    }
+  },
+
+
+  /**
+   * Get popular movies
+   * @param {number} page
+   * @returns {Promise<Array>}
+   */
+  async getPopularMovies(page = 1) {
+    try {
+      const cacheKey = popular_page_;
+      const cached = await Cache.get('popular_movies', cacheKey);
+      if (cached) {
+        return cached;
+      }
+      
+      const url = ${this.BASE_URL}/movie/popular?api_key=&language=en-US&region=JP&page=;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+      
+      if (!data.results || data.results.length === 0) {
+        return [];
+      }
+      
+      const movies = data.results
+        .filter(movie => movie.vote_average >= 5.0)
+        .slice(0, 20)
+        .map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          rating: movie.vote_average,
+          description: movie.overview,
+          genres: movie.genre_ids || [],
+          posterPath: movie.poster_path,
+          backdropPath: movie.backdrop_path,
+          popularity: movie.popularity,
+          originalLanguage: movie.original_language
+        }));
+      
+      await Cache.set('popular_movies', cacheKey, movies);
+      return movies;
+    } catch (error) {
+      console.error('[API] Error getting popular movies:', error);
       return [];
     }
   },
