@@ -16,8 +16,8 @@
 
 const Recommender = {
   // Configuration
-  RECENT_MOVIE_WEIGHT: 0.5,
-  GENRE_WEIGHT: 0.3,
+  RECENT_MOVIE_WEIGHT: 0.4,
+  GENRE_WEIGHT: 0.4,
   LANGUAGE_WEIGHT: 0.2,
   RECENT_MOVIE_COUNT: 3,
   TOP_GENRE_COUNT: 3,
