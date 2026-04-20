@@ -254,7 +254,7 @@ const API = {
         return cached;
       }
 
-      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&sort_by=vote_average.desc&vote_count.gte=20&page=${page}`;
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&sort_by=vote_average.desc&page=${page}`;
       
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
@@ -303,7 +303,7 @@ const API = {
       }
 
       // Use discover endpoint to filter by original language
-      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&sort_by=vote_average.desc&vote_count.gte=20&page=${page}`;
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&sort_by=vote_average.desc&page=${page}`;
 
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
