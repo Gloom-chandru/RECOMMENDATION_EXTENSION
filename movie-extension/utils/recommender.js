@@ -22,7 +22,7 @@ const Recommender = {
   RECENT_MOVIE_COUNT: 3,
   TOP_GENRE_COUNT: 3,
   TARGET_RECOMMENDATION_COUNT: 6,
-  MIN_RATING_THRESHOLD: 5.0, // Only recommend movies with rating >= 6.0
+  MIN_RATING_THRESHOLD: 5.0, // Only recommend movies with rating >= 5.0
 
   /**
    * Get personalized recommendations
@@ -508,4 +508,4 @@ const Recommender = {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = Recommender;
-}
+
