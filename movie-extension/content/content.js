@@ -115,6 +115,12 @@ async function handleMovieDetected(movieTitle) {
   try {
     console.log('[Content] Movie detected:', movieTitle);
 
+    // Check if this is live content - don't track or recommend for live streams
+    if (PlatformDetectors.isLiveContent()) {
+      console.log('[Content] Live content detected, skipping movie tracking and recommendations');
+      return;
+    }
+
     // Fetch movie details from TMDb
     const movieData = await API.searchMovie(movieTitle);
     if (movieData && lastTrackedMovieId && movieData.id === lastTrackedMovieId) {
@@ -235,6 +241,13 @@ function setupVideoPlaybackListener(video, platform) {
 
   const handlePlay = async () => {
     if (hasStartedPlayback || !currentMovieData) return;
+    
+    // Check if this is live content - don't show recommendations for live streams
+    if (PlatformDetectors.isLiveContent()) {
+      console.log('[Content] Live content detected, skipping recommendations');
+      return;
+    }
+    
     hasStartedPlayback = true;
 
     console.log('[Content] User started watching:', currentMovieData.title, 'on', platform);

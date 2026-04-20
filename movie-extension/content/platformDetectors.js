@@ -212,6 +212,43 @@ const PlatformDetectors = {
     };
 
     return detectors[platform]?.() || false;
+  },
+
+  /**
+   * Check if current content is live (not pre-recorded)
+   * @returns {boolean}
+   */
+  isLiveContent() {
+    const platform = this.getCurrentPlatform();
+    if (!platform) return false;
+
+    const detectors = {
+      netflix: () => {
+        // Check for LIVE badge or live indicators
+        return !!document.querySelector('[data-uia*="live"]') ||
+               !!document.querySelector('.live-badge') ||
+               !!document.querySelector('[aria-label*="live" i]') ||
+               !!document.querySelector('span:contains("LIVE")') ||
+               !!document.querySelector('div:contains("LIVE")') ||
+               !!document.querySelector('.player-status--live') ||
+               // Check URL for live content patterns
+               /\/live\//.test(window.location.pathname);
+      },
+      hotstar: () => {
+        // Hotstar live content detection
+        return !!document.querySelector('[data-testid*="live"]') ||
+               !!document.querySelector('.live-indicator') ||
+               !!document.querySelector('[aria-label*="live" i]');
+      },
+      primevideo: () => {
+        // Prime Video live content detection
+        return !!document.querySelector('[data-a-target*="live"]') ||
+               !!document.querySelector('.live-badge') ||
+               !!document.querySelector('[aria-label*="live" i]');
+      }
+    };
+
+    return detectors[platform]?.() || false;
   }
 };
 
