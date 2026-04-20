@@ -437,7 +437,7 @@ const Recommender = {
       }
 
       // Use popular endpoint as fallback
-      const url = `${API.BASE_URL}/movie/popular?api_key=${API.API_KEY}&language=en-US`;
+      const url = `${API.BASE_URL}/movie/popular?api_key=${API.API_KEY}&language=en-US&region=IN`;
       const response = await API._fetchWithRetry(url);
       const data = await response.json();
 
