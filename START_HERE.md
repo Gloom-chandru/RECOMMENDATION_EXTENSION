@@ -107,6 +107,7 @@ movie-extension/
 ```
 
 **Most important: Update `utils/api.js` with your API key!**
+_________
 
 ---
 
