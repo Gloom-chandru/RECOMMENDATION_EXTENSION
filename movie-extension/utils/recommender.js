@@ -22,7 +22,7 @@ const Recommender = {
   RECENT_MOVIE_COUNT: 3,
   TOP_GENRE_COUNT: 3,
   TARGET_RECOMMENDATION_COUNT: 6,
-  MIN_RATING_THRESHOLD: 6.0, // Only recommend movies with rating >= 6.0
+  MIN_RATING_THRESHOLD: 5.0, // Only recommend movies with rating >= 6.0
 
   /**
    * Get personalized recommendations
@@ -173,7 +173,7 @@ const Recommender = {
         for (const language of topLanguages) {
           try {
             // Get popular movies in this language
-            const movies = await API.getMoviesByLanguage("diverse");
+            const movies = await API.getMoviesByLanguage(language);
             
             if (movies && movies.length > 0) {
               const isOriginal = languageCount[language] >= 1; // Prefer original language
@@ -437,7 +437,7 @@ const Recommender = {
       }
 
       // Use popular endpoint as fallback
-      const url = `${API.BASE_URL}/movie/popular?api_key=${API.API_KEY}&language=en-US&region=IN`;
+      const url = `${API.BASE_URL}/movie/popular?api_key=${API.API_KEY}&language=en-US`;
       const response = await API._fetchWithRetry(url);
       const data = await response.json();
 
