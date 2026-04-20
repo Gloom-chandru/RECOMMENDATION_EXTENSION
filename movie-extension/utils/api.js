@@ -360,7 +360,7 @@ const API = {
           
           if (data.results) {
             const regionMovies = data.results
-              .filter(movie => movie.vote_average >= 5.0) // Lower threshold for diversity
+              .filter(movie => movie.vote_average >= 4.0) // Lower threshold for diversity
               .slice(0, 5) // 5 movies per region
               .map(movie => ({
                 id: movie.id,
@@ -416,7 +416,7 @@ const API = {
       }
       
       const movies = data.results
-        .filter(movie => movie.vote_average >= 5.0)
+        .filter(movie => movie.vote_average >= 4.0)
         .slice(0, 20)
         .map(movie => ({
           id: movie.id,
