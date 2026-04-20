@@ -100,13 +100,13 @@ const API = {
     if (!movieId) return null;
 
     try {
-      const cacheKey = ${movieId}_page_;
+      const cacheKey = `${movieId}_page_`;
       const cached = await Cache.get('similar_movies', cacheKey);
       if (cached) {
         return cached;
       }
 
-      const url = ${this.BASE_URL}/movie//similar?api_key=&language=en-US&page=;
+      const url = `${this.BASE_URL}/movie/${movieId}/similar?api_key=${this.API_KEY}&language=en-US&page=${page}`;
       
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
@@ -146,13 +146,13 @@ const API = {
     if (!genreId) return null;
 
     try {
-      const cacheKey = ${genreId}_page_;
+      const cacheKey = `${genreId}_page_`;
       const cached = await Cache.get('genre_movies', cacheKey);
       if (cached) {
         return cached;
       }
 
-      const url = ${this.BASE_URL}/discover/movie?api_key=&language=en-US&with_genres=&sort_by=popularity.desc&page=;
+      const url = ${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&sort_by=popularity.desc&page=${page}
       
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
@@ -288,6 +288,12 @@ const API = {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = API;
+
+
+
+
+
+
 
 
 

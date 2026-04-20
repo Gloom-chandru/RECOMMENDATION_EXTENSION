@@ -10,6 +10,7 @@ const Overlay = {
   currentRecommendations: [],
   container: null,
   triggerBtn: null,
+  currentMovieData: null,
 
   /**
    * Initialize overlay — creates trigger button + panel
@@ -49,17 +50,18 @@ const Overlay = {
   /**
    * Show overlay with recommendations
    */
-  async show(recommendations = []) {
+  async show(recommendations = [], currentMovie = null) {
     try {
       if (!this.container) this.init();
 
+      this.currentMovieData = currentMovie;
       this.currentRecommendations = recommendations;
 
       if (recommendations.length === 0) {
         this._renderLoading();
         this._openPanel();
 
-        const recs = await Recommender.getRecommendations();
+        const recs = await Recommender.getRecommendations(this.currentMovieData);
         this.currentRecommendations = recs;
 
         if (recs.length === 0) {
@@ -130,11 +132,58 @@ const Overlay = {
   },
 
   /**
+   * Get human-readable language name
+   * @param {string} langCode
+   * @returns {string}
+   */
+  _getLanguageName(langCode) {
+    const languageNames = {
+      'en': 'English',
+      'hi': 'Hindi',
+      'te': 'Telugu',
+      'ta': 'Tamil',
+      'kn': 'Kannada',
+      'ml': 'Malayalam',
+      'bn': 'Bengali',
+      'mr': 'Marathi',
+      'gu': 'Gujarati',
+      'pa': 'Punjabi',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'it': 'Italian',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+      'zh': 'Chinese',
+      'ru': 'Russian',
+      'ar': 'Arabic'
+    };
+    
+    return languageNames[langCode] || langCode.toUpperCase();
+  },
+
+  /**
    * Build header HTML (shared across all panel states)
    */
   _buildHeader(subtitle = '') {
+    let movieTypeInfo = '';
+    
+    if (this.currentMovieData) {
+      const genres = this.currentMovieData.genres?.map(g => g.name || g).join(', ') || 'Unknown';
+      const language = this._getLanguageName(this.currentMovieData.originalLanguage) || 'Unknown';
+      const year = this.currentMovieData.releaseDate ? new Date(this.currentMovieData.releaseDate).getFullYear() : 'Unknown';
+      
+      movieTypeInfo = `
+        <div class="mr-current-movie">
+          <div class="mr-current-movie-title">Currently watching: ${this.currentMovieData.title}</div>
+          <div class="mr-current-movie-type">${genres} • ${language} • ${year}</div>
+        </div>
+      `;
+    }
+
     return `
       <div class="mr-head">
+        ${movieTypeInfo}
         <div class="mr-head-left">
           <div class="mr-head-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#mr-logo-g)" stroke-width="2.2">
@@ -532,6 +581,28 @@ const Overlay = {
         background: var(--mr-border-hover);
         color: var(--mr-text);
         transform: scale(1.05);
+      }
+
+      /* Current Movie Display */
+      .mr-current-movie {
+        width: 100%;
+        padding: 12px 18px;
+        background: linear-gradient(135deg, rgba(167, 139, 250, 0.08) 0%, rgba(129, 140, 248, 0.06) 100%);
+        border-bottom: 1px solid var(--mr-border);
+        margin-bottom: 8px;
+      }
+      .mr-current-movie-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--mr-text);
+        margin-bottom: 4px;
+        display: block;
+      }
+      .mr-current-movie-type {
+        font-size: 11px;
+        color: var(--mr-primary);
+        font-weight: 500;
+        opacity: 0.9;
       }
 
       /* ========== CARDS CONTAINER ========== */

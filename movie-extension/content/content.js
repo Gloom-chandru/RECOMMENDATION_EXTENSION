@@ -157,7 +157,7 @@ async function handleMovieDetected(movieTitle) {
 
     // Show overlay with recommendations
     if (extensionEnabled) {
-      Overlay.show();
+      Overlay.show([], movieWithPlatform);
     }
   } catch (error) {
     console.error('[Content] Error handling movie detection:', error);

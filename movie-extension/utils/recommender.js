@@ -27,9 +27,10 @@ const Recommender = {
   /**
    * Get personalized recommendations
    * Main entry point for recommendation algorithm
+   * @param {Object} currentMovie - Currently watching movie data
    * @returns {Promise<Array>}
    */
-  async getRecommendations() {
+  async getRecommendations(currentMovie = null) {
     try {
       const history = await Storage.getHistory();
       
@@ -40,7 +41,7 @@ const Recommender = {
 
       const recommendations = {
         fromRecent: await this._getRecommendationsFromRecent(history),
-        fromGenres: await this._getRecommendationsFromGenres(),
+        fromGenres: await this._getRecommendationsFromGenres(currentMovie),
         fromLanguages: await this._getRecommendationsFromLanguages(history)
       };
 
@@ -94,33 +95,48 @@ const Recommender = {
 
   /**
    * Get recommendations based on genre frequency (40% weight)
-   * Finds movies in favorite genres
+   * Prioritizes current movie's genre if available
+   * @param {Object} currentMovie - Currently watching movie data
    * @returns {Promise<Array>}
    */
-  async _getRecommendationsFromGenres() {
+  async _getRecommendationsFromGenres(currentMovie = null) {
     try {
-      const topGenres = await Storage.getTopGenres(this.TOP_GENRE_COUNT);
+      let genresToUse = [];
       
-      if (topGenres.length === 0) {
-        return [];
+      // If we have current movie data, prioritize its genres
+      if (currentMovie && currentMovie.genres && currentMovie.genres.length > 0) {
+        const currentGenres = currentMovie.genres.map(g => g.name || g);
+        genresToUse = currentGenres;
+        console.log('[Recommender] Prioritizing current movie genres:', currentGenres);
+      } else {
+        // Fall back to user's favorite genres
+        const topGenres = await Storage.getTopGenres(this.TOP_GENRE_COUNT);
+        if (topGenres.length === 0) {
+          return [];
+        }
+        genresToUse = topGenres;
       }
 
       const allByGenre = [];
 
-      for (const genre of topGenres) {
+      for (const genre of genresToUse) {
         // Try to fetch movies by genre
-        // This would require mapping genre names to IDs
         const genreId = this._mapGenreNameToId(genre);
         
         if (genreId) {
           const movies = await API.getMoviesByGenre(genreId);
           
           if (movies && movies.length > 0) {
+            const isCurrentGenre = currentMovie && currentMovie.genres.some(g => (g.name || g) === genre);
+            const weight = isCurrentGenre ? 0.8 : 0.5; // Higher weight for current movie's genre
+            
             movies.forEach(m => {
               allByGenre.push({
                 ...m,
-                source: `Because you like "${genre}" movies`,
-                weight: 0.5,
+                source: isCurrentGenre ? 
+                  `Similar to "${currentMovie.title}" (${genre})` :
+                  `Because you like "${genre}" movies`,
+                weight: weight,
                 reason: 'genre'
               });
             });
