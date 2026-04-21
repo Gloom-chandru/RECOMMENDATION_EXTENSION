@@ -240,7 +240,7 @@ const API = {
    */
   async getPopularMovies(page = 1) {
     try {
-      const cacheKey = popular_page_;
+      const cacheKey = `popular_page_${page}`;
       const cached = await Cache.get('popular_movies', cacheKey);
       if (cached) {
         return cached;
