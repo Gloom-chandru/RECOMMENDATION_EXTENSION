@@ -101,6 +101,7 @@ function attachEventListeners() {
   resetAllBtn.addEventListener('click', resetAllData);
   exportDataBtn.addEventListener('click', exportData);
   clearCacheBtn.addEventListener('click', clearCache);
+  reloadBtn.addEventListener('click', reloadData);
 
   // Settings inputs
   document.getElementById('extension-enabled').addEventListener('change', (e) => {
