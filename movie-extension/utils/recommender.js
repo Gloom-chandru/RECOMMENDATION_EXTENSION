@@ -154,6 +154,7 @@ const Recommender = {
   /**
    * Get recommendations based on language preferences (20% weight)
    * Finds movies in similar languages and popular movies with language preference
+   * Enhanced to support ALL languages dynamically
    * @param {Array} history
    * @returns {Promise<Array>}
    */
@@ -176,10 +177,10 @@ const Recommender = {
         }
       });
 
-      // Get top languages
+      // Get top languages - increased from 2 to 5 for comprehensive coverage
       const topLanguages = Object.entries(languageCount)
         .sort(([,a], [,b]) => b - a)
-        .slice(0, 2) // Top 2 languages
+        .slice(0, 5) // Top 5 languages for all-language support
         .map(([lang]) => lang);
 
       const allByLanguage = [];
@@ -221,7 +222,7 @@ const Recommender = {
           
           const diverseMovies = popularMovies
             .filter(movie => !languageMovieIds.has(movie.id))
-            .slice(0, 8); // Get 8 diverse movies
+            .slice(0, 12); // Increased from 8 to 12 for more diverse language representation
             
           diverseMovies.forEach(m => {
             // Give lower weight to diverse movies
@@ -251,11 +252,14 @@ const Recommender = {
 
   /**
    * Get human-readable language name
+   * Comprehensive ISO 639-1 language code mapping
+   * Supports all major world languages
    * @param {string} langCode
    * @returns {string}
    */
   _getLanguageName(langCode) {
     const languageNames = {
+      // Asian Languages
       'en': 'English',
       'hi': 'Hindi',
       'te': 'Telugu',
@@ -266,18 +270,91 @@ const Recommender = {
       'mr': 'Marathi',
       'gu': 'Gujarati',
       'pa': 'Punjabi',
+      'as': 'Assamese',
+      'or': 'Odia',
+      'si': 'Sinhala',
+      'ur': 'Urdu',
+      'fa': 'Persian',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+      'zh': 'Chinese',
+      'vi': 'Vietnamese',
+      'th': 'Thai',
+      'lo': 'Lao',
+      'my': 'Burmese',
+      'km': 'Khmer',
+      'tl': 'Tagalog',
+      'ms': 'Malay',
+      'id': 'Indonesian',
+      'jv': 'Javanese',
+      'su': 'Sundanese',
+      
+      // European Languages
       'es': 'Spanish',
       'fr': 'French',
       'de': 'German',
       'it': 'Italian',
-      'ja': 'Japanese',
-      'ko': 'Korean',
-      'zh': 'Chinese',
+      'pt': 'Portuguese',
+      'pl': 'Polish',
       'ru': 'Russian',
-      'ar': 'Arabic'
+      'uk': 'Ukrainian',
+      'bg': 'Bulgarian',
+      'cs': 'Czech',
+      'sk': 'Slovak',
+      'nl': 'Dutch',
+      'be': 'Flemish',
+      'sv': 'Swedish',
+      'no': 'Norwegian',
+      'da': 'Danish',
+      'fi': 'Finnish',
+      'hu': 'Hungarian',
+      'ro': 'Romanian',
+      'el': 'Greek',
+      'tr': 'Turkish',
+      'hr': 'Croatian',
+      'sr': 'Serbian',
+      'sl': 'Slovenian',
+      'et': 'Estonian',
+      'lv': 'Latvian',
+      'lt': 'Lithuanian',
+      'mt': 'Maltese',
+      'is': 'Icelandic',
+      'ga': 'Irish',
+      'cy': 'Welsh',
+      'ca': 'Catalan',
+      'eu': 'Basque',
+      'gl': 'Galician',
+      
+      // Middle Eastern & African Languages
+      'ar': 'Arabic',
+      'he': 'Hebrew',
+      'am': 'Amharic',
+      'sw': 'Swahili',
+      'zu': 'Zulu',
+      'xh': 'Xhosa',
+      'yo': 'Yoruba',
+      'ha': 'Hausa',
+      'ig': 'Igbo',
+      'af': 'Afrikaans',
+      'rw': 'Kinyarwanda',
+      'tg': 'Tajik',
+      'kk': 'Kazakh',
+      'uz': 'Uzbek',
+      'ky': 'Kyrgyz',
+      'tk': 'Turkmen',
+      'mn': 'Mongolian',
+      'bo': 'Tibetan',
+      
+      // American Languages
+      'es-MX': 'Mexican Spanish',
+      'pt-BR': 'Brazilian Portuguese',
+      'fr-CA': 'Canadian French',
     };
     
-    return languageNames[langCode] || langCode.toUpperCase();
+    // Normalize language code (remove region)
+    const baseLangCode = langCode ? langCode.split('-')[0].toLowerCase() : '';
+    
+    return languageNames[langCode] || languageNames[baseLangCode] || baseLangCode.toUpperCase() || 'Unknown';
   },
 
   /**
