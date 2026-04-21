@@ -8,6 +8,7 @@ const tabButtons = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.tab-content');
 const tabIndicator = document.getElementById('tab-indicator');
 const settingsBtn = document.getElementById('settings-btn');
+const reloadBtn = document.getElementById('reload-btn');
 const settingsPanel = document.getElementById('settings-panel');
 const closeSettingsBtn = document.querySelector('.close-settings-btn');
 
