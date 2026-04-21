@@ -408,6 +408,42 @@ async function showRecommendations() {
 }
 
 /**
+ * Reload all data and recommendations
+ * Clears cache and refreshes dashboard
+ */
+async function reloadData() {
+  try {
+    // Add loading animation to reload button
+    reloadBtn.classList.add('loading');
+
+    // Clear cache
+    try {
+      await Cache.clearAll();
+      console.log('[Popup] Cache cleared');
+    } catch (error) {
+      console.warn('[Popup] Error clearing cache:', error);
+    }
+
+    // Reload dashboard data
+    await loadDashboard();
+    await loadHistory();
+    await loadBookmarks();
+
+    // Remove loading animation
+    reloadBtn.classList.remove('loading');
+
+    // Show success message
+    showToast('Data reloaded successfully', 'success');
+
+    console.log('[Popup] Data reloaded successfully');
+  } catch (error) {
+    console.error('[Popup] Error reloading data:', error);
+    reloadBtn.classList.remove('loading');
+    showToast('Failed to reload data', 'error');
+  }
+}
+
+/**
  * Clear watch history
  */
 async function clearHistory() {
