@@ -596,6 +596,110 @@ const Recommender = {
       topGenreCount: this.TOP_GENRE_COUNT,
       targetRecommendationCount: this.TARGET_RECOMMENDATION_COUNT
     };
+  },
+
+  /**
+   * Get all detected languages from user history
+   * Returns complete list of languages user has watched in
+   * Supports ALL languages dynamically
+   * @returns {Promise<Array>}
+   */
+  async getAllDetectedLanguages() {
+    try {
+      const history = await Storage.getHistory();
+      const languages = {};
+
+      history.forEach(movie => {
+        const lang = movie.originalLanguage;
+        if (lang) {
+          if (!languages[lang]) {
+            languages[lang] = {
+              code: lang,
+              name: this._getLanguageName(lang),
+              count: 0
+            };
+          }
+          languages[lang].count++;
+        }
+      });
+
+      // Convert to array and sort by frequency
+      return Object.values(languages)
+        .sort((a, b) => b.count - a.count);
+    } catch (error) {
+      console.error('[Recommender] Error getting detected languages:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get trending movies for a specific language
+   * Fetches trending movies in user's preferred language
+   * @param {string} languageCode
+   * @returns {Promise<Array>}
+   */
+  async getTrendingByLanguage(languageCode) {
+    try {
+      if (!languageCode) return [];
+
+      const movies = await API.getTrendingByLanguage(languageCode);
+      
+      return movies.slice(0, this.TARGET_RECOMMENDATION_COUNT).map(m => ({
+        id: m.id,
+        title: m.title,
+        posterPath: m.posterPath,
+        rating: m.rating,
+        genres: m.genres || [],
+        description: m.description,
+        explanation: `Trending in ${this._getLanguageName(languageCode)}`,
+        backdropPath: m.backdropPath,
+        originalLanguage: m.originalLanguage
+      }));
+    } catch (error) {
+      console.error('[Recommender] Error getting trending by language:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get recommendations across all user's preferred languages
+   * Comprehensive recommendation covering all languages user watches
+   * @returns {Promise<Array>}
+   */
+  async getRecommendationsByAllLanguages() {
+    try {
+      const languages = await this.getAllDetectedLanguages();
+      
+      if (languages.length === 0) {
+        return await this._getTrendingMovies();
+      }
+
+      const allRecommendations = [];
+      const movieIds = new Set();
+
+      // Get recommendations for each detected language
+      for (const lang of languages.slice(0, 5)) { // Limit to top 5 languages
+        const langMovies = await this.getTrendingByLanguage(lang.code);
+        
+        langMovies.forEach(movie => {
+          if (!movieIds.has(movie.id) && movie.rating >= this.MIN_RATING_THRESHOLD) {
+            movieIds.add(movie.id);
+            allRecommendations.push({
+              ...movie,
+              languageCode: lang.code
+            });
+          }
+        });
+      }
+
+      // Sort by rating
+      return allRecommendations
+        .sort((a, b) => b.rating - a.rating)
+        .slice(0, this.TARGET_RECOMMENDATION_COUNT);
+    } catch (error) {
+      console.error('[Recommender] Error getting all-language recommendations:', error);
+      return await this._getTrendingMovies();
+    }
   }
 };
 
