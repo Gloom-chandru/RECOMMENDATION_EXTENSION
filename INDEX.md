@@ -18,7 +18,7 @@ movie-extension/
 │
 ├── content/
 │   ├── content.js                 Movie detection & tracking (220 lines)
-│   └── platformDetectors.js       Platform detection logic (180 lines)
+│   └── platformDetectors.js       Platform detection logic (170 lines)
 │
 ├── background/
 │   └── background.js              Service worker (210 lines)
