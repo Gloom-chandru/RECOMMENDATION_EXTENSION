@@ -61,8 +61,15 @@ const Overlay = {
         this._renderLoading();
         this._openPanel();
 
-        const recs = await Recommender.getRecommendations(this.currentMovieData);
+        let recs = await Recommender.getRecommendations(this.currentMovieData);
         this.currentRecommendations = recs;
+
+        // Fallback to trending if no recommendations
+        if (recs.length === 0) {
+          console.log('[Overlay] No recommendations, showing trending movies as fallback');
+          recs = await Recommender._getTrendingMovies();
+          this.currentRecommendations = recs;
+        }
 
         if (recs.length === 0) {
           this._renderEmpty();

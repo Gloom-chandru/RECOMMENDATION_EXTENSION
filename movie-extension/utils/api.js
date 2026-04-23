@@ -231,7 +231,7 @@ const API = {
       return movies;
     } catch (error) {
       console.error('[API] Error getting movies by language:', error);
-      return null;
+      return [];
     }
   },
 

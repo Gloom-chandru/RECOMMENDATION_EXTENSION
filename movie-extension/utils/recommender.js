@@ -22,7 +22,7 @@ const Recommender = {
   RECENT_MOVIE_COUNT: 3,
   TOP_GENRE_COUNT: 3,
   TARGET_RECOMMENDATION_COUNT: 6,
-  MIN_RATING_THRESHOLD: 5.0, // Only recommend movies with rating >= 5.0
+  MIN_RATING_THRESHOLD: 3.0, // Lower threshold to allow more recommendations
 
   /**
    * Get personalized recommendations
@@ -33,6 +33,10 @@ const Recommender = {
   async getRecommendations(currentMovie = null) {
     try {
       const history = await Storage.getHistory();
+      console.log('[Recommender] Starting recommendation engine:', {
+        currentMovie: currentMovie?.title,
+        historySize: history.length
+      });
       
       if (history.length === 0) {
         console.log('[Recommender] No history available, returning trending movies');
@@ -400,6 +404,13 @@ const Recommender = {
    */
   async _mergeRecommendations(recommendations, history) {
     try {
+      console.log('[Recommender] Merging recommendations:', {
+        recentCount: (recommendations.fromRecent || []).length,
+        genreCount: (recommendations.fromGenres || []).length,
+        languageCount: (recommendations.fromLanguages || []).length,
+        historyCount: history.length
+      });
+
       const scoreMap = new Map();
       const historyTitles = new Set(history.map(h => h.title.toLowerCase()));
       const historyIds = new Set(history.map(h => `${h.tmdbId || h.id}`));
@@ -413,13 +424,17 @@ const Recommender = {
           return;
         }
 
+        // Ensure rating is a valid number, default to 6.0 if missing
+        const rating = typeof movie.rating === 'number' ? movie.rating : 6.0;
+
         const existing = scoreMap.get(key) || {
           ...movie,
           score: 0,
-          sources: []
+          sources: [],
+          rating: rating
         };
 
-        existing.score += (this.RECENT_MOVIE_WEIGHT * movie.weight * movie.rating / 10);
+        existing.score += (this.RECENT_MOVIE_WEIGHT * movie.weight * rating / 10);
         existing.sources.push(movie.source);
 
         scoreMap.set(key, existing);
@@ -434,13 +449,17 @@ const Recommender = {
           return;
         }
 
+        // Ensure rating is a valid number, default to 6.0 if missing
+        const rating = typeof movie.rating === 'number' ? movie.rating : 6.0;
+
         const existing = scoreMap.get(key) || {
           ...movie,
           score: 0,
-          sources: []
+          sources: [],
+          rating: rating
         };
 
-        existing.score += (this.GENRE_WEIGHT * movie.weight * movie.rating / 10);
+        existing.score += (this.GENRE_WEIGHT * movie.weight * rating / 10);
         existing.sources.push(movie.source);
 
         scoreMap.set(key, existing);
@@ -455,21 +474,40 @@ const Recommender = {
           return;
         }
 
+        // Ensure rating is a valid number, default to 6.0 if missing
+        const rating = typeof movie.rating === 'number' ? movie.rating : 6.0;
+
         const existing = scoreMap.get(key) || {
           ...movie,
           score: 0,
-          sources: []
+          sources: [],
+          rating: rating
         };
 
-        existing.score += (this.LANGUAGE_WEIGHT * movie.weight * movie.rating / 10);
+        existing.score += (this.LANGUAGE_WEIGHT * movie.weight * rating / 10);
         existing.sources.push(movie.source);
 
         scoreMap.set(key, existing);
       });
 
       // Sort by score with rating boost and prepare output
+      console.log('[Recommender] Score map before filtering:', {
+        totalInMap: scoreMap.size,
+        threshold: this.MIN_RATING_THRESHOLD
+      });
+
       const sorted = Array.from(scoreMap.values())
-        .filter(movie => movie.rating >= this.MIN_RATING_THRESHOLD) // Only high-rated movies
+        .filter(movie => {
+          const passes = movie.rating >= this.MIN_RATING_THRESHOLD;
+          if (!passes) {
+            console.warn('[Recommender] Filtering out movie due to low rating:', {
+              title: movie.title,
+              rating: movie.rating,
+              threshold: this.MIN_RATING_THRESHOLD
+            });
+          }
+          return passes;
+        })
         .sort((a, b) => {
           // Primary sort: by score
           const scoreDiff = b.score - a.score;
@@ -490,6 +528,11 @@ const Recommender = {
           explanation: this._generateExplanation(movie.sources),
           backdropPath: movie.backdropPath
         }));
+
+      console.log('[Recommender] Final recommendations:', {
+        count: sorted.length,
+        titles: sorted.map(m => m.title)
+      });
 
       return sorted;
     } catch (error) {
