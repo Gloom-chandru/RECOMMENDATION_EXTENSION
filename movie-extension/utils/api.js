@@ -376,7 +376,8 @@ const API = {
       console.warn('[API] Error getting supported languages:', error);
       return [];
     }
-  }
+  },
+
   /**
    * Get movie details by ID
    * Fetches full details including genres names and spoken languages
