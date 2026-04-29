@@ -225,14 +225,21 @@ const PlatformDetectors = {
     const detectors = {
       netflix: () => {
         // Check for LIVE badge or live indicators
-        return !!document.querySelector('[data-uia*="live"]') ||
-               !!document.querySelector('.live-badge') ||
-               !!document.querySelector('[aria-label*="live" i]') ||
-               !!document.querySelector('span:contains("LIVE")') ||
-               !!document.querySelector('div:contains("LIVE")') ||
-               !!document.querySelector('.player-status--live') ||
-               // Check URL for live content patterns
-               /\/live\//.test(window.location.pathname);
+        if (document.querySelector('[data-uia*="live"]') ||
+            document.querySelector('.live-badge') ||
+            document.querySelector('[aria-label*="live" i]') ||
+            document.querySelector('.player-status--live') ||
+            /\/live\//.test(window.location.pathname)) {
+          return true;
+        }
+        // Check for LIVE text in spans and divs (native DOM approach)
+        const elements = document.querySelectorAll('span, div');
+        for (const el of elements) {
+          if (el.children.length === 0 && el.textContent.trim() === 'LIVE') {
+            return true;
+          }
+        }
+        return false;
       },
       hotstar: () => {
         // Hotstar live content detection

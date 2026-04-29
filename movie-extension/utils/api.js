@@ -377,15 +377,67 @@ const API = {
       return [];
     }
   }
+  /**
+   * Get movie details by ID
+   * Fetches full details including genres names and spoken languages
+   * @param {number} movieId
+   * @returns {Promise<Object|null>}
+   */
+  async getMovieDetails(movieId) {
+    if (!movieId) return null;
+
+    try {
+      const cacheKey = `details_${movieId}`;
+      const cached = await Cache.get('movie_details', cacheKey);
+      if (cached) {
+        console.log('[API] Cache hit for movie details:', movieId);
+        return cached;
+      }
+
+      const url = `${this.BASE_URL}/movie/${movieId}?api_key=${this.API_KEY}&language=en-US`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      if (!data || !data.id) {
+        return null;
+      }
+
+      const details = {
+        id: data.id,
+        title: data.title,
+        releaseDate: data.release_date,
+        rating: data.vote_average,
+        description: data.overview,
+        genres: (data.genres || []).map(g => ({ id: g.id, name: g.name })),
+        posterPath: data.poster_path,
+        backdropPath: data.backdrop_path,
+        originalLanguage: data.original_language,
+        spokenLanguages: (data.spoken_languages || []).map(l => l.iso_639_1),
+        runtime: data.runtime,
+        popularity: data.popularity
+      };
+
+      await Cache.set('movie_details', cacheKey, details);
+      return details;
+    } catch (error) {
+      console.error('[API] Error getting movie details:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Check if the API is configured with a valid key
+   * @returns {boolean}
+   */
+  isConfigured() {
+    return !!(this.API_KEY && this.API_KEY.length > 0 && this.API_KEY !== 'YOUR_API_KEY_HERE');
+  }
 };
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = API;
-
-
-
-
+}
 
 
 
