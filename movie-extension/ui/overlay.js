@@ -240,38 +240,6 @@ const Overlay = {
     `;
   },
 
-    return `
-      <div class="mr-head">
-        ${movieTypeInfo}
-        <div class="mr-head-left">
-          <div class="mr-head-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#mr-logo-g)" stroke-width="2.2">
-              <defs>
-                <linearGradient id="mr-logo-g" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#a78bfa"/>
-                  <stop offset="100%" stop-color="#818cf8"/>
-                </linearGradient>
-              </defs>
-              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-              <line x1="7" y1="2" x2="7" y2="22"></line>
-              <line x1="17" y1="2" x2="17" y2="22"></line>
-              <line x1="2" y1="12" x2="22" y2="12"></line>
-            </svg>
-          </div>
-          <div class="mr-head-text">
-            <span class="mr-head-title">Movie Buddy</span>
-            ${subtitle ? `<span class="mr-head-sub">${subtitle}</span>` : ''}
-          </div>
-        </div>
-        <button class="mr-close-btn" aria-label="Close panel">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-    `;
-  },
 
   /**
    * Main render — card list
