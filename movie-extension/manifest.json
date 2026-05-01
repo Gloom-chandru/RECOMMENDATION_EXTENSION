@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Cross-Platform Movie Recommendation",
-  "version": "1.0.0",
-  "description": "Track your movie browsing and get personalized recommendations across streaming platforms",
+  "name": "Cross-Platform Movie & TV Recommendation",
+  "version": "2.0.0",
+  "description": "Track your movie & TV show browsing and get personalized recommendations across streaming platforms",
   "author": "Senior Full-Stack Developer",
   
   "permissions": [
@@ -16,12 +16,18 @@
     "https://www.hotstar.com/*",
     "https://www.primevideo.com/*",
     "https://www.netflix.com/*",
+    "https://www.disneyplus.com/*",
+    "https://www.hulu.com/*",
+    "https://www.jiocinema.com/*",
+    "https://www.zee5.com/*",
+    "https://www.sonyliv.com/*",
+    "https://www.crunchyroll.com/*",
     "https://api.themoviedb.org/*"
   ],
   
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Movie Recommendations"
+    "default_title": "Movie & TV Recommendations"
   },
   
   "background": {
@@ -33,10 +39,17 @@
       "matches": [
         "https://www.hotstar.com/*",
         "https://www.primevideo.com/*",
-        "https://www.netflix.com/*"
+        "https://www.netflix.com/*",
+        "https://www.disneyplus.com/*",
+        "https://www.hulu.com/*",
+        "https://www.jiocinema.com/*",
+        "https://www.zee5.com/*",
+        "https://www.sonyliv.com/*",
+        "https://www.crunchyroll.com/*"
       ],
       "js": [
         "utils/cache.js",
+        "utils/i18n.js",
         "utils/api.js",
         "utils/storage.js",
         "utils/recommender.js",
