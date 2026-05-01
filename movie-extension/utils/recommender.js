@@ -99,22 +99,28 @@ const Recommender = {
   },
 
   /**
-   * Enrich recent movies with keywords + credits data
+   * Enrich recent items with keywords + credits data
+   * Handles both movies and TV shows
    */
   async _enrichRecentMovies(history) {
     const recent = history.slice(0, this.RECENT_MOVIE_COUNT);
     const enriched = [];
 
-    for (const movie of recent) {
-      if (!movie.tmdbId) continue;
+    for (const item of recent) {
+      if (!item.tmdbId) continue;
+      const isTV = item.contentType === 'tv';
       try {
         const [keywords, credits] = await Promise.all([
-          API.getMovieKeywords(movie.tmdbId),
-          API.getMovieCredits(movie.tmdbId)
+          isTV ? API.getTVKeywords(item.tmdbId) : API.getMovieKeywords(item.tmdbId),
+          isTV ? API.getTVCredits(item.tmdbId) : API.getMovieCredits(item.tmdbId)
         ]);
-        enriched.push({ ...movie, keywords, credits });
+        // Normalize TV credits (creators → directors)
+        const normalizedCredits = isTV
+          ? { directors: credits.creators || [], topCast: credits.topCast || [] }
+          : credits;
+        enriched.push({ ...item, keywords, credits: normalizedCredits });
       } catch {
-        enriched.push({ ...movie, keywords: [], credits: { directors: [], topCast: [] } });
+        enriched.push({ ...item, keywords: [], credits: { directors: [], topCast: [] } });
       }
     }
     return enriched;
@@ -127,22 +133,34 @@ const Recommender = {
   async _getFromSimilarAndRecs(enrichedRecent) {
     const all = [];
     for (let i = 0; i < enrichedRecent.length; i++) {
-      const movie = enrichedRecent[i];
-      if (!movie.tmdbId) continue;
-      const recencyWeight = 1 / (i + 1); // 1.0, 0.5, 0.33...
+      const item = enrichedRecent[i];
+      if (!item.tmdbId) continue;
+      const recencyWeight = 1 / (i + 1);
+      const isTV = item.contentType === 'tv';
 
       try {
         const [similar, recs] = await Promise.all([
-          API.getSimilarMovies(movie.tmdbId),
-          API.getMovieRecommendations(movie.tmdbId)
+          isTV ? API.getSimilarTV(item.tmdbId) : API.getSimilarMovies(item.tmdbId),
+          isTV ? API.getTVRecommendations(item.tmdbId) : API.getMovieRecommendations(item.tmdbId)
         ]);
 
         const combined = [...(similar || []), ...(recs || [])];
+
+        // If anime, also fetch anime-specific recs
+        if (item.isAnime) {
+          try {
+            const animeRecs = await API.discoverAnime({ type: isTV ? 'tv' : 'movie' });
+            combined.push(...(animeRecs || []));
+          } catch (e) {
+            console.warn('[Recommender] Anime discover error:', e);
+          }
+        }
+
         combined.forEach(m => {
           all.push({
             ...m,
             weight: recencyWeight,
-            source: `Based on "${movie.title}"`,
+            source: `Based on "${item.title}"`,
             reason: 'similar'
           });
         });
