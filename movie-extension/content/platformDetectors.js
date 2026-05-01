@@ -1,48 +1,109 @@
 /**
- * Platform Detectors
- * Identifies when user is on a movie detail page and extracts movie title
- * Handles DOM mutations for dynamic content
+ * Platform Detectors v2.0
+ * Supports: Hotstar, Prime Video, Netflix, Disney+, Hulu, JioCinema, Zee5, SonyLIV, Crunchyroll
+ * Detects both Movies and TV Shows
  */
 
 const PlatformDetectors = {
   /**
    * Detect current platform from URL
-   * @returns {string|null} Platform identifier or null
+   * @returns {string|null}
    */
   getCurrentPlatform() {
-    const hostname = window.location.hostname;
-    
-    if (hostname.includes('hotstar.com')) return 'hotstar';
-    if (hostname.includes('primevideo.com')) return 'primevideo';
-    if (hostname.includes('netflix.com')) return 'netflix';
-    
+    const h = window.location.hostname;
+    if (h.includes('hotstar.com')) return 'hotstar';
+    if (h.includes('primevideo.com')) return 'primevideo';
+    if (h.includes('netflix.com')) return 'netflix';
+    if (h.includes('disneyplus.com')) return 'disneyplus';
+    if (h.includes('hulu.com')) return 'hulu';
+    if (h.includes('jiocinema.com')) return 'jiocinema';
+    if (h.includes('zee5.com')) return 'zee5';
+    if (h.includes('sonyliv.com')) return 'sonyliv';
+    if (h.includes('crunchyroll.com')) return 'crunchyroll';
     return null;
   },
 
   /**
-   * Check if current page is a movie detail page
+   * Detect content type — 'movie', 'tv', or null
+   * @returns {string|null}
+   */
+  getContentType() {
+    const platform = this.getCurrentPlatform();
+    if (!platform) return null;
+    const path = window.location.pathname.toLowerCase();
+
+    const tvIndicators = {
+      hotstar: () => /\/(tv|show|series|episode)\//.test(path) ||
+                     !!document.querySelector('[data-testid*="episode"]') ||
+                     !!document.querySelector('.episode-list'),
+      primevideo: () => /\/(season|episode)/.test(path) ||
+                        !!document.querySelector('[data-testid="episodes"]') ||
+                        !!document.querySelector('.episodeSelector'),
+      netflix: () => !!document.querySelector('[data-uia="episodes-container"]') ||
+                     !!document.querySelector('.episodesContainer'),
+      disneyplus: () => /\/(series|episode)\//.test(path) ||
+                        !!document.querySelector('[data-testid="episodes"]'),
+      hulu: () => /\/(series|episode)\//.test(path) ||
+                  !!document.querySelector('.EpisodeCollection'),
+      jiocinema: () => /\/(tv-show|series|episode)\//.test(path) ||
+                       !!document.querySelector('.episode-container'),
+      zee5: () => /\/(tv-show|web-series|episode)\//.test(path) ||
+                  !!document.querySelector('.episodeList'),
+      sonyliv: () => /\/(show|episode)\//.test(path) ||
+                     !!document.querySelector('.episode-list'),
+      crunchyroll: () => /\/(series|episode)\//.test(path) ||
+                         !!document.querySelector('.erc-episodes-container')
+    };
+
+    if (tvIndicators[platform]?.()) return 'tv';
+    if (this.isMovieDetailPage()) return 'movie';
+    return null;
+  },
+
+  /**
+   * Check if current page is a movie/show detail page
    * @returns {boolean}
    */
   isMovieDetailPage() {
     const platform = this.getCurrentPlatform();
-    
     if (!platform) return false;
-    
+
     const detectors = {
       hotstar: () => {
-        // Hotstar: /detail/<id> or /movie/<title>
-        const pathMatch = /\/(detail|movie)\//.test(window.location.pathname);
-        return pathMatch && this._hasMovieElements('hotstar');
+        const p = /\/(detail|movie|show|series)\//.test(window.location.pathname);
+        return p && this._hasMovieElements('hotstar');
       },
       primevideo: () => {
-        // Prime Video: /detail/<id>
-        const pathMatch = /\/detail\//.test(window.location.pathname);
-        return pathMatch && this._hasMovieElements('primevideo');
+        const p = /\/detail\//.test(window.location.pathname);
+        return p && this._hasMovieElements('primevideo');
       },
       netflix: () => {
-        // Netflix: /title/<id> or watch pages
-        const pathMatch = /\/(title|watch)\//.test(window.location.pathname);
-        return pathMatch && this._hasMovieElements('netflix');
+        const p = /\/(title|watch)\//.test(window.location.pathname);
+        return p && this._hasMovieElements('netflix');
+      },
+      disneyplus: () => {
+        const p = /\/(movies|series|video)\//.test(window.location.pathname);
+        return p && this._hasMovieElements('disneyplus');
+      },
+      hulu: () => {
+        const p = /\/(movie|series|watch)\//.test(window.location.pathname);
+        return p && this._hasMovieElements('hulu');
+      },
+      jiocinema: () => {
+        const p = /\/(movies|tv-show|web-series)\//.test(window.location.pathname);
+        return p && this._hasMovieElements('jiocinema');
+      },
+      zee5: () => {
+        const p = /\/(movies|tv-show|web-series|details)\//.test(window.location.pathname);
+        return p && this._hasMovieElements('zee5');
+      },
+      sonyliv: () => {
+        const p = /\/(movies|show|detail)\//.test(window.location.pathname);
+        return p && this._hasMovieElements('sonyliv');
+      },
+      crunchyroll: () => {
+        const p = /\/(series|watch)\//.test(window.location.pathname);
+        return p && this._hasMovieElements('crunchyroll');
       }
     };
 
@@ -50,36 +111,27 @@ const PlatformDetectors = {
   },
 
   /**
-   * Check if page has expected movie detail elements
+   * Check if page has expected detail elements
    * @param {string} platform
    * @returns {boolean}
    */
   _hasMovieElements(platform) {
     const checks = {
-      hotstar: () => {
-        // Check for common Hotstar movie detail page elements
-        return !!document.querySelector('[data-testid="detailTitle"]') ||
-               !!document.querySelector('h1');
-      },
-      primevideo: () => {
-        // Check for common Prime Video elements
-        return !!document.querySelector('[data-a-target="hero-atf-title"]') ||
-               !!document.querySelector('h1');
-      },
-      netflix: () => {
-        // Check for common Netflix elements
-        return !!document.querySelector('[data-uia="hero-title"]') ||
-               !!document.querySelector('h1') ||
-               !!document.querySelector('.title-info h1');
-      }
+      hotstar: () => !!document.querySelector('[data-testid="detailTitle"]') || !!document.querySelector('h1'),
+      primevideo: () => !!document.querySelector('[data-a-target="hero-atf-title"]') || !!document.querySelector('h1'),
+      netflix: () => !!document.querySelector('[data-uia="hero-title"]') || !!document.querySelector('h1') || !!document.querySelector('.title-info h1'),
+      disneyplus: () => !!document.querySelector('[data-testid="title"]') || !!document.querySelector('h1') || !!document.querySelector('.title-field h1'),
+      hulu: () => !!document.querySelector('.DetailEntityMasthead__title') || !!document.querySelector('h1'),
+      jiocinema: () => !!document.querySelector('.content-title') || !!document.querySelector('h1'),
+      zee5: () => !!document.querySelector('.movie-title') || !!document.querySelector('.content-title') || !!document.querySelector('h1'),
+      sonyliv: () => !!document.querySelector('.content-detail-title') || !!document.querySelector('h1'),
+      crunchyroll: () => !!document.querySelector('.hero-heading-line') || !!document.querySelector('h1.title')
     };
-
     return checks[platform]?.() || false;
   },
 
   /**
-   * Extract movie title from page
-   * Handles dynamic content with fallback selectors
+   * Extract movie/show title from page
    * @returns {string|null}
    */
   extractMovieTitle() {
@@ -87,74 +139,72 @@ const PlatformDetectors = {
     if (!platform) return null;
 
     const extractors = {
-      hotstar: () => {
-        // Try multiple selectors for robustness
-        const selectors = [
-          '[data-testid="detailTitle"]',
-          'h1[data-testid]',
-          'h1.title',
-          'h1:not(.logo):not(.navbar-brand)'
-        ];
+      hotstar: () => this._trySelectors([
+        '[data-testid="detailTitle"]', 'h1[data-testid]', 'h1.title',
+        'h1:not(.logo):not(.navbar-brand)'
+      ]) || this._extractFromUrl(/\/(?:detail|movie|show)\/([^/]+)/),
 
-        for (const selector of selectors) {
-          const element = document.querySelector(selector);
-          if (element?.textContent?.trim()) {
-            return element.textContent.trim();
-          }
-        }
+      primevideo: () => this._trySelectors([
+        '[data-a-target="hero-atf-title"]', 'h1[data-a-target]', 'h1.title', '.hero-title h1'
+      ]),
 
-        // Fallback: extract from URL
-        const match = window.location.pathname.match(/\/(?:detail|movie)\/([^/]+)/);
-        return match ? decodeURIComponent(match[1]).replace(/[_-]/g, ' ') : null;
-      },
+      netflix: () => this._trySelectors([
+        '[data-uia="hero-title"]', '.title-info h1', 'h1[data-uia]',
+        '.previewModal--player-titleTreatment h1', 'h1:not(.logo):not(.navbar-brand)'
+      ]) || this._extractFromUrl(/\/title\/(\d+)/),
 
-      primevideo: () => {
-        const selectors = [
-          '[data-a-target="hero-atf-title"]',
-          'h1[data-a-target]',
-          'h1.title',
-          '.hero-title h1'
-        ];
+      disneyplus: () => this._trySelectors([
+        '[data-testid="title"]', '.title-field h1', 'h1[data-testid]',
+        'h1:not(.logo)'
+      ]),
 
-        for (const selector of selectors) {
-          const element = document.querySelector(selector);
-          if (element?.textContent?.trim()) {
-            return element.textContent.trim();
-          }
-        }
+      hulu: () => this._trySelectors([
+        '.DetailEntityMasthead__title', 'h1.masthead-title', 'h1:not(.logo)'
+      ]),
 
-        return null;
-      },
+      jiocinema: () => this._trySelectors([
+        '.content-title', '.meta-title h1', 'h1.title', 'h1:not(.logo)'
+      ]) || this._extractFromUrl(/\/(?:movies|tv-show)\/([^/]+)/),
 
-      netflix: () => {
-        const selectors = [
-          '[data-uia="hero-title"]',
-          '.title-info h1',
-          'h1[data-uia]',
-          '.previewModal--player-titleTreatment h1',
-          'h1:not(.logo):not(.navbar-brand)'
-        ];
+      zee5: () => this._trySelectors([
+        '.movie-title', '.content-title', '.detail-title h1', 'h1:not(.logo)'
+      ]) || this._extractFromUrl(/\/(?:movies|tv-show|web-series)\/[^/]+\/([^/]+)/),
 
-        for (const selector of selectors) {
-          const element = document.querySelector(selector);
-          if (element?.textContent?.trim()) {
-            return element.textContent.trim();
-          }
-        }
+      sonyliv: () => this._trySelectors([
+        '.content-detail-title', '.detail-title', 'h1.title', 'h1:not(.logo)'
+      ]),
 
-        // Fallback: extract from URL
-        const match = window.location.pathname.match(/\/title\/(\d+)/);
-        return match ? `Title ${match[1]}` : null;
-      }
+      crunchyroll: () => this._trySelectors([
+        '.hero-heading-line', 'h1.title', '.erc-series-hero h1',
+        'h1:not(.logo)'
+      ])
     };
 
     const title = extractors[platform]?.();
-    return title ? title.substring(0, 150) : null; // Cap title length
+    return title ? title.substring(0, 150) : null;
+  },
+
+  /**
+   * Try multiple CSS selectors, return first match text
+   */
+  _trySelectors(selectors) {
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el?.textContent?.trim()) return el.textContent.trim();
+    }
+    return null;
+  },
+
+  /**
+   * Extract title from URL path
+   */
+  _extractFromUrl(regex) {
+    const match = window.location.pathname.match(regex);
+    return match ? decodeURIComponent(match[1]).replace(/[_-]/g, ' ') : null;
   },
 
   /**
    * Set up MutationObserver to watch for DOM changes
-   * Calls callback when movie title changes
    * @param {Function} callback
    * @returns {MutationObserver}
    */
@@ -165,30 +215,19 @@ const PlatformDetectors = {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         const title = this.extractMovieTitle();
-        if (title) {
-          callback(title);
-        }
+        if (title) callback(title);
       }, 300);
     });
 
-    // Watch for changes in main content area
-    const targetElements = [
-      document.documentElement,
-      document.body
-    ];
-
-    for (const target of targetElements) {
+    const targets = [document.documentElement, document.body];
+    for (const target of targets) {
       if (target) {
         observer.observe(target, {
-          childList: true,
-          subtree: true,
-          characterData: false,
-          attributes: true,
-          attributeFilter: ['data-testid', 'title', 'aria-label']
+          childList: true, subtree: true, characterData: false,
+          attributes: true, attributeFilter: ['data-testid', 'title', 'aria-label']
         });
       }
     }
-
     return observer;
   },
 
@@ -200,18 +239,10 @@ const PlatformDetectors = {
     const platform = this.getCurrentPlatform();
     if (!platform) return false;
 
-    const detectors = {
-      hotstar: () => {
-        return !!document.querySelector('[data-testid="loading"]') ||
-               !!document.querySelector('.loading');
-      },
-      primevideo: () => {
-        return !!document.querySelector('[data-a-target="loading"]') ||
-               !!document.querySelector('.loading');
-      }
-    };
-
-    return detectors[platform]?.() || false;
+    return !!document.querySelector('[data-testid="loading"]') ||
+           !!document.querySelector('[data-a-target="loading"]') ||
+           !!document.querySelector('.loading') ||
+           !!document.querySelector('.spinner');
   },
 
   /**
@@ -222,44 +253,68 @@ const PlatformDetectors = {
     const platform = this.getCurrentPlatform();
     if (!platform) return false;
 
-    const detectors = {
-      netflix: () => {
-        // Check for LIVE badge or live indicators
-        if (document.querySelector('[data-uia*="live"]') ||
-            document.querySelector('.live-badge') ||
-            document.querySelector('[aria-label*="live" i]') ||
-            document.querySelector('.player-status--live') ||
-            /\/live\//.test(window.location.pathname)) {
-          return true;
-        }
-        // Check for LIVE text in spans and divs (native DOM approach)
-        const elements = document.querySelectorAll('span, div');
-        for (const el of elements) {
-          if (el.children.length === 0 && el.textContent.trim() === 'LIVE') {
-            return true;
-          }
-        }
-        return false;
-      },
-      hotstar: () => {
-        // Hotstar live content detection
-        return !!document.querySelector('[data-testid*="live"]') ||
-               !!document.querySelector('.live-indicator') ||
-               !!document.querySelector('[aria-label*="live" i]');
-      },
-      primevideo: () => {
-        // Prime Video live content detection
-        return !!document.querySelector('[data-a-target*="live"]') ||
-               !!document.querySelector('.live-badge') ||
-               !!document.querySelector('[aria-label*="live" i]');
-      }
+    // Universal live content checks
+    if (document.querySelector('[aria-label*="live" i]') ||
+        document.querySelector('.live-badge') ||
+        document.querySelector('.live-indicator') ||
+        /\/live\//.test(window.location.pathname)) {
+      return true;
+    }
+
+    // Platform-specific
+    const checks = {
+      netflix: () => !!document.querySelector('[data-uia*="live"]') ||
+                     !!document.querySelector('.player-status--live'),
+      hotstar: () => !!document.querySelector('[data-testid*="live"]'),
+      primevideo: () => !!document.querySelector('[data-a-target*="live"]'),
+      jiocinema: () => !!document.querySelector('.live-tag') ||
+                       /\/live-tv\//.test(window.location.pathname),
+      zee5: () => !!document.querySelector('.live-label') ||
+                  /\/live-tv\//.test(window.location.pathname),
+      sonyliv: () => /\/live-tv\//.test(window.location.pathname)
     };
 
-    return detectors[platform]?.() || false;
+    if (checks[platform]?.()) return true;
+
+    // Fallback: check for LIVE text
+    const elements = document.querySelectorAll('span, div');
+    for (const el of elements) {
+      if (el.children.length === 0 && el.textContent.trim() === 'LIVE') return true;
+    }
+    return false;
+  },
+
+  /**
+   * Detect if content is anime (for Crunchyroll and others)
+   * @returns {boolean}
+   */
+  isAnimeContent() {
+    const platform = this.getCurrentPlatform();
+    
+    // Crunchyroll is always anime
+    if (platform === 'crunchyroll') return true;
+
+    // Check URL patterns
+    if (/\/anime\//.test(window.location.pathname)) return true;
+
+    // Check for anime-related DOM elements
+    if (document.querySelector('[data-testid*="anime"]') ||
+        document.querySelector('.anime-tag') ||
+        document.querySelector('[class*="anime"]')) {
+      return true;
+    }
+
+    // Check genre tags on the page
+    const genreElements = document.querySelectorAll('.genre, .genre-tag, .tag, [class*="genre"]');
+    for (const el of genreElements) {
+      const text = el.textContent.trim().toLowerCase();
+      if (text === 'anime' || text === 'animation' || text === 'アニメ') return true;
+    }
+
+    return false;
   }
 };
 
-// Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PlatformDetectors;
 }
