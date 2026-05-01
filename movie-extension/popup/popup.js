@@ -235,6 +235,13 @@ function getPlatformIcon(platform) {
   const icons = {
     hotstar: '🟢',
     primevideo: '🔵',
+    netflix: '🔴',
+    disneyplus: '🏰',
+    hulu: '🟩',
+    jiocinema: '🟣',
+    zee5: '🟡',
+    sonyliv: '🟠',
+    crunchyroll: '🧡',
     unknown: '🎬'
   };
   return icons[platform] || icons.unknown;
