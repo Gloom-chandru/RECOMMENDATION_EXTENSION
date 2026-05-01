@@ -26,7 +26,8 @@ async function init() {
   try {
     console.log('[Popup] Initializing');
 
-    // Initialize storage
+    // Initialize i18n and storage
+    await I18n.init();
     await Storage.init();
 
     // Set up tab indicator position
@@ -123,6 +124,37 @@ function attachEventListeners() {
   document.getElementById('recommendation-count').addEventListener('change', (e) => {
     Storage.updateSettings({ recommendationCount: parseInt(e.target.value) });
   });
+
+  // Language selector
+  const langSelect = document.getElementById('ui-language');
+  if (langSelect) {
+    langSelect.value = I18n.currentLang || 'en';
+    langSelect.addEventListener('change', async (e) => {
+      await I18n.setLanguage(e.target.value);
+      showToast('Language updated — reload to apply');
+    });
+  }
+
+  // Reload dashboard button
+  const reloadDashBtn = document.getElementById('reload-dashboard-btn');
+  if (reloadDashBtn) {
+    reloadDashBtn.addEventListener('click', reloadData);
+  }
+}
+
+/**
+ * Show a toast notification
+ */
+function showToast(message, duration = 2500) {
+  let toast = document.querySelector('.toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), duration);
 }
 
 /**
