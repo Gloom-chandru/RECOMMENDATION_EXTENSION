@@ -4,7 +4,7 @@
  */
 
 // Import shared utility modules
-importScripts('../utils/cache.js', '../utils/api.js', '../utils/storage.js', '../utils/recommender.js');
+importScripts('../utils/cache.js', '../utils/i18n.js', '../utils/api.js', '../utils/storage.js', '../utils/recommender.js');
 
 // Initialize on install
 chrome.runtime.onInstalled.addListener((details) => {
@@ -134,7 +134,14 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   try {
     const url = new URL(tab.url);
     const isSupported = url.hostname.includes('hotstar.com') || 
-                       url.hostname.includes('primevideo.com');
+                       url.hostname.includes('primevideo.com') ||
+                       url.hostname.includes('netflix.com') ||
+                       url.hostname.includes('disneyplus.com') ||
+                       url.hostname.includes('hulu.com') ||
+                       url.hostname.includes('jiocinema.com') ||
+                       url.hostname.includes('zee5.com') ||
+                       url.hostname.includes('sonyliv.com') ||
+                       url.hostname.includes('crunchyroll.com');
 
     if (!isSupported) return;
 
