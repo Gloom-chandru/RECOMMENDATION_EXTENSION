@@ -71,6 +71,8 @@ const Storage = {
       // Create history entry
       const historyEntry = {
         title: movie.title,
+        contentType: movie.contentType || 'movie',
+        isAnime: movie.isAnime || false,
         genres: movie.genres || [],
         tmdbId: movie.id,
         posterPath: movie.posterPath,
@@ -78,6 +80,7 @@ const Storage = {
         spokenLanguages: Array.isArray(movie.spokenLanguages) ? movie.spokenLanguages : [],
         directors: Array.isArray(movie.directors) ? movie.directors : [],
         keywords: Array.isArray(movie.keywords) ? movie.keywords.slice(0, 10) : [],
+        numberOfSeasons: movie.numberOfSeasons || null,
         timestamp: Date.now(),
         platform: movie.platform || 'unknown',
         rating: movie.rating || 0
