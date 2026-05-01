@@ -116,13 +116,14 @@ const API = {
       }
 
       const movies = data.results
-        .filter(movie => movie.vote_average >= 5.0)
-        .slice(0, 10)
+        .filter(movie => movie.vote_average >= 5.0 && movie.vote_count >= 50)
+        .slice(0, 15)
         .map(movie => ({
           id: movie.id,
           title: movie.title,
           releaseDate: movie.release_date,
           rating: movie.vote_average,
+          voteCount: movie.vote_count,
           description: movie.overview,
           genres: movie.genre_ids || [],
           posterPath: movie.poster_path,
@@ -140,6 +141,265 @@ const API = {
   },
 
   /**
+   * Get TMDb collaborative-filtering recommendations for a movie
+   * Different from /similar — uses user behavior patterns on TMDb
+   * @param {number} movieId
+   * @param {number} page
+   * @returns {Promise<Array>}
+   */
+  async getMovieRecommendations(movieId, page = 1) {
+    if (!movieId) return [];
+
+    try {
+      const cacheKey = `recs_${movieId}_page_${page}`;
+      const cached = await Cache.get('movie_recs', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/movie/${movieId}/recommendations?api_key=${this.API_KEY}&language=en-US&page=${page}`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      if (!data.results || data.results.length === 0) return [];
+
+      const movies = data.results
+        .filter(movie => movie.vote_average >= 5.0 && movie.vote_count >= 50)
+        .slice(0, 15)
+        .map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          rating: movie.vote_average,
+          voteCount: movie.vote_count,
+          description: movie.overview,
+          genres: movie.genre_ids || [],
+          posterPath: movie.poster_path,
+          backdropPath: movie.backdrop_path,
+          popularity: movie.popularity,
+          originalLanguage: movie.original_language
+        }));
+
+      await Cache.set('movie_recs', cacheKey, movies);
+      return movies;
+    } catch (error) {
+      console.error('[API] Error getting movie recommendations:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get movie keywords (themes like "heist", "time travel", "dystopia")
+   * @param {number} movieId
+   * @returns {Promise<Array>}
+   */
+  async getMovieKeywords(movieId) {
+    if (!movieId) return [];
+
+    try {
+      const cacheKey = `keywords_${movieId}`;
+      const cached = await Cache.get('movie_keywords', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/movie/${movieId}/keywords?api_key=${this.API_KEY}`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      const keywords = (data.keywords || []).map(k => ({ id: k.id, name: k.name }));
+
+      await Cache.set('movie_keywords', cacheKey, keywords);
+      return keywords;
+    } catch (error) {
+      console.error('[API] Error getting movie keywords:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get movie credits (cast + crew — directors, lead actors)
+   * @param {number} movieId
+   * @returns {Promise<Object>}
+   */
+  async getMovieCredits(movieId) {
+    if (!movieId) return { directors: [], topCast: [] };
+
+    try {
+      const cacheKey = `credits_${movieId}`;
+      const cached = await Cache.get('movie_credits', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/movie/${movieId}/credits?api_key=${this.API_KEY}`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      const directors = (data.crew || [])
+        .filter(c => c.job === 'Director')
+        .map(c => ({ id: c.id, name: c.name }));
+
+      const topCast = (data.cast || [])
+        .slice(0, 5)
+        .map(c => ({ id: c.id, name: c.name, character: c.character }));
+
+      const credits = { directors, topCast };
+
+      await Cache.set('movie_credits', cacheKey, credits);
+      return credits;
+    } catch (error) {
+      console.error('[API] Error getting movie credits:', error);
+      return { directors: [], topCast: [] };
+    }
+  },
+
+  /**
+   * Discover movies by multiple genre IDs (intersection)
+   * Much more precise than single-genre discover
+   * @param {Array<number>} genreIds - Array of genre IDs to intersect
+   * @param {Object} options - Additional filter options
+   * @returns {Promise<Array>}
+   */
+  async discoverByMultipleGenres(genreIds, options = {}) {
+    if (!genreIds || genreIds.length === 0) return [];
+
+    try {
+      const genreStr = genreIds.join(',');
+      const page = options.page || 1;
+      const sortBy = options.sortBy || 'vote_average.desc';
+      const voteCountGte = options.voteCountGte || 200;
+      const language = options.withLanguage || '';
+
+      const cacheKey = `multig_${genreStr}_${sortBy}_${voteCountGte}_${language}_p${page}`;
+      const cached = await Cache.get('multi_genre_discover', cacheKey);
+      if (cached) return cached;
+
+      let url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreStr}&sort_by=${sortBy}&vote_count.gte=${voteCountGte}&page=${page}`;
+      if (language) {
+        url += `&with_original_language=${language}`;
+      }
+
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      if (!data.results || data.results.length === 0) return [];
+
+      const movies = data.results
+        .slice(0, 15)
+        .map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          rating: movie.vote_average,
+          voteCount: movie.vote_count,
+          description: movie.overview,
+          genres: movie.genre_ids || [],
+          posterPath: movie.poster_path,
+          backdropPath: movie.backdrop_path,
+          popularity: movie.popularity,
+          originalLanguage: movie.original_language
+        }));
+
+      await Cache.set('multi_genre_discover', cacheKey, movies);
+      return movies;
+    } catch (error) {
+      console.error('[API] Error discovering by multiple genres:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Discover movies by a specific person (director or actor)
+   * @param {number} personId
+   * @param {Object} options
+   * @returns {Promise<Array>}
+   */
+  async discoverByPerson(personId, options = {}) {
+    if (!personId) return [];
+
+    try {
+      const page = options.page || 1;
+      const sortBy = options.sortBy || 'vote_average.desc';
+      const voteCountGte = options.voteCountGte || 100;
+
+      const cacheKey = `person_${personId}_${sortBy}_p${page}`;
+      const cached = await Cache.get('person_discover', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_people=${personId}&sort_by=${sortBy}&vote_count.gte=${voteCountGte}&page=${page}`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      if (!data.results || data.results.length === 0) return [];
+
+      const movies = data.results
+        .slice(0, 10)
+        .map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          rating: movie.vote_average,
+          voteCount: movie.vote_count,
+          description: movie.overview,
+          genres: movie.genre_ids || [],
+          posterPath: movie.poster_path,
+          backdropPath: movie.backdrop_path,
+          popularity: movie.popularity,
+          originalLanguage: movie.original_language
+        }));
+
+      await Cache.set('person_discover', cacheKey, movies);
+      return movies;
+    } catch (error) {
+      console.error('[API] Error discovering by person:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Discover movies by keyword IDs
+   * @param {Array<number>} keywordIds
+   * @param {Object} options
+   * @returns {Promise<Array>}
+   */
+  async discoverByKeywords(keywordIds, options = {}) {
+    if (!keywordIds || keywordIds.length === 0) return [];
+
+    try {
+      const kwStr = keywordIds.slice(0, 5).join(',');
+      const page = options.page || 1;
+      const voteCountGte = options.voteCountGte || 100;
+
+      const cacheKey = `kw_${kwStr}_p${page}`;
+      const cached = await Cache.get('keyword_discover', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_keywords=${kwStr}&sort_by=vote_average.desc&vote_count.gte=${voteCountGte}&page=${page}`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      if (!data.results || data.results.length === 0) return [];
+
+      const movies = data.results
+        .slice(0, 10)
+        .map(movie => ({
+          id: movie.id,
+          title: movie.title,
+          releaseDate: movie.release_date,
+          rating: movie.vote_average,
+          voteCount: movie.vote_count,
+          description: movie.overview,
+          genres: movie.genre_ids || [],
+          posterPath: movie.poster_path,
+          backdropPath: movie.backdrop_path,
+          popularity: movie.popularity,
+          originalLanguage: movie.original_language
+        }));
+
+      await Cache.set('keyword_discover', cacheKey, movies);
+      return movies;
+    } catch (error) {
+      console.error('[API] Error discovering by keywords:', error);
+      return [];
+    }
+  },
+
+  /**
    * Get movies by genre
    */
   async getMoviesByGenre(genreId, page = 1) {
@@ -152,7 +412,7 @@ const API = {
         return cached;
       }
 
-      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&sort_by=popularity.desc&page=${page}`
+      const url = `${this.BASE_URL}/discover/movie?api_key=${this.API_KEY}&language=en-US&with_genres=${genreId}&sort_by=popularity.desc&vote_count.gte=100&page=${page}`
       
       const response = await this._fetchWithRetry(url);
       const data = await response.json();
@@ -162,13 +422,14 @@ const API = {
       }
 
       const movies = data.results
-        .filter(movie => movie.vote_average >= 4.0)
+        .filter(movie => movie.vote_average >= 5.0)
         .slice(0, 10)
         .map(movie => ({
           id: movie.id,
           title: movie.title,
           releaseDate: movie.release_date,
           rating: movie.vote_average,
+          voteCount: movie.vote_count,
           description: movie.overview,
           genres: movie.genre_ids || [],
           posterPath: movie.poster_path,
@@ -212,13 +473,14 @@ const API = {
       }
 
       const movies = data.results
-        .filter(movie => movie.vote_average >= 4.0)
+        .filter(movie => movie.vote_average >= 5.0 && movie.vote_count >= 50)
         .slice(0, 10)
         .map(movie => ({
           id: movie.id,
           title: movie.title,
           releaseDate: movie.release_date,
           rating: movie.vote_average,
+          voteCount: movie.vote_count,
           description: movie.overview,
           genres: movie.genre_ids || [],
           posterPath: movie.poster_path,
