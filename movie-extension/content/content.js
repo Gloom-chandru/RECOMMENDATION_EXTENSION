@@ -295,30 +295,51 @@ async function showPlatformSpecificRecommendations(movieData, platform) {
   try {
     console.log('[Content] Getting platform-specific recommendations for:', movieData.title, 'on', platform);
 
-    // Get similar movies
-    const similarMovies = await API.getSimilarMovies(movieData.id);
+    // Merge both similar and collaborative recommendations for better accuracy
+    const [similarMovies, collabRecs] = await Promise.all([
+      API.getSimilarMovies(movieData.id),
+      API.getMovieRecommendations(movieData.id)
+    ]);
 
-    if (!similarMovies || similarMovies.length === 0) {
+    // Deduplicate by ID
+    const seen = new Set();
+    const allMovies = [];
+    [...(similarMovies || []), ...(collabRecs || [])].forEach(m => {
+      if (m.id && !seen.has(m.id) && m.id !== movieData.id &&
+          m.title.trim().toLowerCase() !== movieData.title.trim().toLowerCase()) {
+        seen.add(m.id);
+        allMovies.push(m);
+      }
+    });
+
+    if (allMovies.length === 0) {
       console.log('[Content] No similar movies found');
       return;
     }
 
-    // Filter for high-rated movies and limit
-    const highRatedMovies = similarMovies
-      .filter(movie => movie.rating >= 6.0 && movie.id !== movieData.id && movie.title.trim().toLowerCase() !== movieData.title.trim().toLowerCase())
-      .slice(0, 4); // Show 4 platform-specific recommendations
+    // Sort by Bayesian rating and take top 5
+    const BAYESIAN_M = 200;
+    const BAYESIAN_C = 6.5;
+    const sorted = allMovies
+      .filter(m => m.rating >= 6.0 && (m.voteCount || 0) >= 50)
+      .sort((a, b) => {
+        const wrA = ((a.voteCount || 0) / ((a.voteCount || 0) + BAYESIAN_M)) * a.rating +
+                     (BAYESIAN_M / ((a.voteCount || 0) + BAYESIAN_M)) * BAYESIAN_C;
+        const wrB = ((b.voteCount || 0) / ((b.voteCount || 0) + BAYESIAN_M)) * b.rating +
+                     (BAYESIAN_M / ((b.voteCount || 0) + BAYESIAN_M)) * BAYESIAN_C;
+        return wrB - wrA;
+      })
+      .slice(0, 5);
 
-    // Create platform-specific recommendations
-    const platformRecommendations = highRatedMovies.map(movie => ({
+    const platformRecommendations = sorted.map(movie => ({
       ...movie,
-      explanation: `Similar to "${movieData.title}" - Available on ${getPlatformDisplayName(platform)}`,
+      explanation: `Similar to "${movieData.title}" \u2014 on ${getPlatformDisplayName(platform)}`,
       platformSpecific: true,
       currentPlatform: platform
     }));
 
     platformSpecificRecommendations = platformRecommendations;
 
-    // Show overlay with platform-specific recommendations
     if (extensionEnabled) {
       Overlay.showPlatformSpecific(platformRecommendations);
     }
