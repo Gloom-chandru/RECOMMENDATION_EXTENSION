@@ -22,7 +22,8 @@ async function init() {
   try {
     console.log('[Content] Initializing on', window.location.hostname);
 
-    // Initialize storage
+    // Initialize i18n and storage
+    await I18n.init();
     await Storage.init();
 
     // Check if extension is enabled
@@ -121,58 +122,80 @@ async function handleMovieDetected(movieTitle) {
       return;
     }
 
-    // Fetch movie details from TMDb
-    const movieData = await API.searchMovie(movieTitle);
+    // Detect content type (movie vs TV show vs anime)
+    const contentType = PlatformDetectors.getContentType() || 'movie';
+    const isAnime = PlatformDetectors.isAnimeContent();
+    const isTV = contentType === 'tv';
+
+    console.log('[Content] Content type:', contentType, isAnime ? '(anime)' : '');
+
+    // Search using the appropriate API
+    const movieData = isTV
+      ? await API.searchTV(movieTitle)
+      : await API.searchMovie(movieTitle);
+
     if (movieData && lastTrackedMovieId && movieData.id === lastTrackedMovieId) {
-      console.log('[Content] Same movie detected, skipping redundant refresh:', movieTitle);
+      console.log('[Content] Same content detected, skipping:', movieTitle);
       return;
     }
 
     if (!movieData) {
-      console.warn('[Content] Could not find movie details:', movieTitle);
+      console.warn('[Content] Could not find details:', movieTitle);
       return;
     }
 
-    // Fetch full details, credits, and keywords in parallel for enriched data
+    // Fetch full details, credits, and keywords in parallel
     let fullDetails = null;
     let credits = { directors: [], topCast: [] };
     let keywords = [];
 
     if (movieData.id) {
       try {
-        const [details, creds, kws] = await Promise.all([
-          API.getMovieDetails(movieData.id),
-          API.getMovieCredits(movieData.id),
-          API.getMovieKeywords(movieData.id)
-        ]);
-        fullDetails = details;
-        credits = creds || credits;
-        keywords = kws || [];
+        if (isTV) {
+          const [details, creds, kws] = await Promise.all([
+            API.getTVDetails(movieData.id),
+            API.getTVCredits(movieData.id),
+            API.getTVKeywords(movieData.id)
+          ]);
+          fullDetails = details;
+          credits = creds ? { directors: creds.creators || [], topCast: creds.topCast || [] } : credits;
+          keywords = kws || [];
+        } else {
+          const [details, creds, kws] = await Promise.all([
+            API.getMovieDetails(movieData.id),
+            API.getMovieCredits(movieData.id),
+            API.getMovieKeywords(movieData.id)
+          ]);
+          fullDetails = details;
+          credits = creds || credits;
+          keywords = kws || [];
+        }
       } catch (e) {
         console.warn('[Content] Error fetching enriched data:', e);
-        fullDetails = await API.getMovieDetails(movieData.id);
+        fullDetails = isTV ? await API.getTVDetails(movieData.id) : await API.getMovieDetails(movieData.id);
       }
     }
 
-    // Add to history with full genre names, language, directors, and keywords
+    // Build enriched data object
     const movieWithPlatform = {
       ...movieData,
+      contentType: isTV ? 'tv' : 'movie',
+      isAnime,
       genres: fullDetails?.genres || movieData.genres,
       originalLanguage: fullDetails?.originalLanguage || null,
       spokenLanguages: fullDetails?.spokenLanguages || [],
       directors: credits.directors || [],
       keywords: keywords,
-      platform: PlatformDetectors.getCurrentPlatform()
+      platform: PlatformDetectors.getCurrentPlatform(),
+      numberOfSeasons: fullDetails?.numberOfSeasons || null
     };
 
     await Storage.addToHistory(movieWithPlatform);
 
-    // Store current movie data for playback detection
     currentMovieData = movieWithPlatform;
     lastTrackedMovie = movieTitle;
     lastTrackedMovieId = movieData.id;
 
-    // Show overlay with recommendations
     if (extensionEnabled) {
       Overlay.show([], movieWithPlatform);
     }
@@ -360,7 +383,13 @@ function getPlatformDisplayName(platform) {
   const names = {
     'hotstar': 'Hotstar',
     'primevideo': 'Prime Video',
-    'netflix': 'Netflix'
+    'netflix': 'Netflix',
+    'disneyplus': 'Disney+',
+    'hulu': 'Hulu',
+    'jiocinema': 'JioCinema',
+    'zee5': 'Zee5',
+    'sonyliv': 'SonyLIV',
+    'crunchyroll': 'Crunchyroll'
   };
   return names[platform] || platform;
 }

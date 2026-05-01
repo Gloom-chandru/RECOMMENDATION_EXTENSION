@@ -694,6 +694,240 @@ const API = {
    */
   isConfigured() {
     return !!(this.API_KEY && this.API_KEY.length > 0 && this.API_KEY !== 'YOUR_API_KEY_HERE');
+  },
+
+  // ==========================================
+  //  TV SHOW ENDPOINTS
+  // ==========================================
+
+  /**
+   * Search for TV show by title
+   */
+  async searchTV(title) {
+    if (!title || !title.trim()) return null;
+    try {
+      const cached = await Cache.get('tv_search', title);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/search/tv?api_key=${this.API_KEY}&query=${encodeURIComponent(title)}&language=en-US`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+      if (!data.results || data.results.length === 0) return null;
+
+      const show = data.results[0];
+      const tvData = {
+        id: show.id, contentType: 'tv',
+        title: show.name, releaseDate: show.first_air_date,
+        rating: show.vote_average, voteCount: show.vote_count,
+        description: show.overview, genres: show.genre_ids || [],
+        posterPath: show.poster_path, backdropPath: show.backdrop_path,
+        originalLanguage: show.original_language
+      };
+      await Cache.set('tv_search', title, tvData);
+      return tvData;
+    } catch (error) {
+      console.error('[API] Error searching TV:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get TV show details
+   */
+  async getTVDetails(tvId) {
+    if (!tvId) return null;
+    try {
+      const cacheKey = `tv_details_${tvId}`;
+      const cached = await Cache.get('tv_details', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/tv/${tvId}?api_key=${this.API_KEY}&language=en-US`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+      if (!data || !data.id) return null;
+
+      const details = {
+        id: data.id, contentType: 'tv',
+        title: data.name, releaseDate: data.first_air_date,
+        rating: data.vote_average, voteCount: data.vote_count,
+        description: data.overview,
+        genres: (data.genres || []).map(g => ({ id: g.id, name: g.name })),
+        posterPath: data.poster_path, backdropPath: data.backdrop_path,
+        originalLanguage: data.original_language,
+        spokenLanguages: (data.spoken_languages || []).map(l => l.iso_639_1),
+        numberOfSeasons: data.number_of_seasons,
+        numberOfEpisodes: data.number_of_episodes,
+        status: data.status, popularity: data.popularity
+      };
+      await Cache.set('tv_details', cacheKey, details);
+      return details;
+    } catch (error) {
+      console.error('[API] Error getting TV details:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get similar TV shows
+   */
+  async getSimilarTV(tvId) {
+    if (!tvId) return [];
+    try {
+      const cacheKey = `similar_tv_${tvId}`;
+      const cached = await Cache.get('similar_tv', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/tv/${tvId}/similar?api_key=${this.API_KEY}&language=en-US`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+      if (!data.results) return [];
+
+      const shows = data.results
+        .filter(s => s.vote_average >= 5.0 && s.vote_count >= 30)
+        .slice(0, 15)
+        .map(s => ({
+          id: s.id, contentType: 'tv', title: s.name,
+          releaseDate: s.first_air_date, rating: s.vote_average,
+          voteCount: s.vote_count, description: s.overview,
+          genres: s.genre_ids || [], posterPath: s.poster_path,
+          backdropPath: s.backdrop_path, popularity: s.popularity,
+          originalLanguage: s.original_language
+        }));
+      await Cache.set('similar_tv', cacheKey, shows);
+      return shows;
+    } catch (error) {
+      console.error('[API] Error getting similar TV:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get TV show recommendations (collaborative filtering)
+   */
+  async getTVRecommendations(tvId) {
+    if (!tvId) return [];
+    try {
+      const cacheKey = `tv_recs_${tvId}`;
+      const cached = await Cache.get('tv_recs', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/tv/${tvId}/recommendations?api_key=${this.API_KEY}&language=en-US`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+      if (!data.results) return [];
+
+      const shows = data.results
+        .filter(s => s.vote_average >= 5.0 && s.vote_count >= 30)
+        .slice(0, 15)
+        .map(s => ({
+          id: s.id, contentType: 'tv', title: s.name,
+          releaseDate: s.first_air_date, rating: s.vote_average,
+          voteCount: s.vote_count, description: s.overview,
+          genres: s.genre_ids || [], posterPath: s.poster_path,
+          backdropPath: s.backdrop_path, popularity: s.popularity,
+          originalLanguage: s.original_language
+        }));
+      await Cache.set('tv_recs', cacheKey, shows);
+      return shows;
+    } catch (error) {
+      console.error('[API] Error getting TV recommendations:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get TV show credits
+   */
+  async getTVCredits(tvId) {
+    if (!tvId) return { creators: [], topCast: [] };
+    try {
+      const cacheKey = `tv_credits_${tvId}`;
+      const cached = await Cache.get('tv_credits', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/tv/${tvId}/credits?api_key=${this.API_KEY}`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+
+      const creators = (data.crew || [])
+        .filter(c => c.job === 'Executive Producer' || c.department === 'Writing')
+        .slice(0, 3)
+        .map(c => ({ id: c.id, name: c.name }));
+      const topCast = (data.cast || [])
+        .slice(0, 5)
+        .map(c => ({ id: c.id, name: c.name, character: c.character }));
+
+      const credits = { creators, topCast };
+      await Cache.set('tv_credits', cacheKey, credits);
+      return credits;
+    } catch (error) {
+      console.error('[API] Error getting TV credits:', error);
+      return { creators: [], topCast: [] };
+    }
+  },
+
+  /**
+   * Get TV show keywords
+   */
+  async getTVKeywords(tvId) {
+    if (!tvId) return [];
+    try {
+      const cacheKey = `tv_keywords_${tvId}`;
+      const cached = await Cache.get('tv_keywords', cacheKey);
+      if (cached) return cached;
+
+      const url = `${this.BASE_URL}/tv/${tvId}/keywords?api_key=${this.API_KEY}`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+      const keywords = (data.results || []).map(k => ({ id: k.id, name: k.name }));
+      await Cache.set('tv_keywords', cacheKey, keywords);
+      return keywords;
+    } catch (error) {
+      console.error('[API] Error getting TV keywords:', error);
+      return [];
+    }
+  },
+
+  // ==========================================
+  //  ANIME-SPECIFIC DISCOVERY
+  // ==========================================
+
+  /**
+   * Discover anime content (Animation genre, Japanese language)
+   */
+  async discoverAnime(options = {}) {
+    try {
+      const page = options.page || 1;
+      const sortBy = options.sortBy || 'popularity.desc';
+      const cacheKey = `anime_${sortBy}_p${page}`;
+      const cached = await Cache.get('anime_discover', cacheKey);
+      if (cached) return cached;
+
+      // Animation genre (16) + Japanese language for anime
+      const url = `${this.BASE_URL}/discover/${options.type || 'tv'}?api_key=${this.API_KEY}&language=en-US&with_genres=16&with_original_language=ja&sort_by=${sortBy}&vote_count.gte=50&page=${page}`;
+      const response = await this._fetchWithRetry(url);
+      const data = await response.json();
+      if (!data.results) return [];
+
+      const isTV = (options.type || 'tv') === 'tv';
+      const results = data.results.slice(0, 15).map(item => ({
+        id: item.id,
+        contentType: isTV ? 'tv' : 'movie',
+        title: isTV ? item.name : item.title,
+        releaseDate: isTV ? item.first_air_date : item.release_date,
+        rating: item.vote_average, voteCount: item.vote_count,
+        description: item.overview, genres: item.genre_ids || [],
+        posterPath: item.poster_path, backdropPath: item.backdrop_path,
+        popularity: item.popularity, originalLanguage: item.original_language,
+        isAnime: true
+      }));
+
+      await Cache.set('anime_discover', cacheKey, results);
+      return results;
+    } catch (error) {
+      console.error('[API] Error discovering anime:', error);
+      return [];
+    }
   }
 };
 
