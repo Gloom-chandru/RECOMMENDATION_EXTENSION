@@ -180,13 +180,65 @@ const Overlay = {
       const language = this._getLanguageName(this.currentMovieData.originalLanguage) || 'Unknown';
       const year = this.currentMovieData.releaseDate ? new Date(this.currentMovieData.releaseDate).getFullYear() : 'Unknown';
       
+      // Content type badge
+      const contentType = this.currentMovieData.contentType || 'movie';
+      const isAnime = this.currentMovieData.isAnime;
+      let typeBadge = '';
+      if (isAnime) {
+        typeBadge = '<span class="mr-type-badge mr-badge-anime">🎌 Anime</span>';
+      } else if (contentType === 'tv') {
+        typeBadge = '<span class="mr-type-badge mr-badge-tv">📺 TV Show</span>';
+      } else {
+        typeBadge = '<span class="mr-type-badge mr-badge-movie">🎬 Movie</span>';
+      }
+
+      const seasons = this.currentMovieData.numberOfSeasons 
+        ? ` • ${this.currentMovieData.numberOfSeasons} Season${this.currentMovieData.numberOfSeasons > 1 ? 's' : ''}`
+        : '';
+
       movieTypeInfo = `
         <div class="mr-current-movie">
-          <div class="mr-current-movie-title">Currently watching: ${this.currentMovieData.title}</div>
-          <div class="mr-current-movie-type">${genres} • ${language} • ${year}</div>
+          <div class="mr-current-movie-header">
+            <div class="mr-current-movie-title">${I18n.t('currentlyWatching')}: ${this.currentMovieData.title}</div>
+            ${typeBadge}
+          </div>
+          <div class="mr-current-movie-type">${genres} • ${language} • ${year}${seasons}</div>
         </div>
       `;
     }
+
+    return `
+      <div class="mr-head">
+        ${movieTypeInfo}
+        <div class="mr-head-left">
+          <div class="mr-head-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="url(#mr-logo-g)" stroke-width="2.2">
+              <defs>
+                <linearGradient id="mr-logo-g" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#a78bfa"/>
+                  <stop offset="100%" stop-color="#818cf8"/>
+                </linearGradient>
+              </defs>
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <line x1="7" y1="2" x2="7" y2="22"></line>
+              <line x1="17" y1="2" x2="17" y2="22"></line>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+            </svg>
+          </div>
+          <div class="mr-head-text">
+            <span class="mr-head-title">${I18n.t('movieBuddy')}</span>
+            ${subtitle ? `<span class="mr-head-sub">${subtitle}</span>` : ''}
+          </div>
+        </div>
+        <button class="mr-close-btn" aria-label="Close panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    `;
+  },
 
     return `
       <div class="mr-head">
@@ -228,8 +280,8 @@ const Overlay = {
   _render(isPlatformSpecific = false) {
     const recs = this.currentRecommendations;
     const headerText = isPlatformSpecific 
-      ? `Available on this platform`
-      : `${recs.length} pick${recs.length !== 1 ? 's' : ''} for you`;
+      ? I18n.t('availableOnPlatform')
+      : I18n.t('picksForYou', { count: recs.length });
 
     this.container.innerHTML = `
       <div class="mr-panel">
@@ -238,7 +290,7 @@ const Overlay = {
           ${recs.map((m, i) => this._renderCard(m, i, isPlatformSpecific)).join('')}
         </div>
         <div class="mr-foot">
-          <span class="mr-foot-brand">Powered by TMDb</span>
+          <span class="mr-foot-brand">${I18n.t('poweredBy')}</span>
           <span class="mr-foot-shortcut"><kbd>Alt</kbd>+<kbd>R</kbd></span>
         </div>
       </div>
@@ -272,7 +324,15 @@ const Overlay = {
       genreTags = genres.map(g => `<span class="mr-tag">${this._esc(g)}</span>`).join('');
     }
 
-    const explanation = movie.explanation || movie.source || 'Recommended for you';
+    const explanation = movie.explanation || movie.source || I18n.t('popularChoice');
+    const desc = movie.description ? movie.description.substring(0, 80) + (movie.description.length > 80 ? '...' : '') : '';
+
+    // Content type mini-badge
+    const cType = movie.contentType || 'movie';
+    const isAnime = movie.isAnime || false;
+    let miniType = '';
+    if (isAnime) miniType = '<span class="mr-mini-type anime">Anime</span>';
+    else if (cType === 'tv') miniType = '<span class="mr-mini-type tv">TV</span>';
 
     return `
       <div class="mr-card" data-id="${movie.id}" style="--i:${index}">
@@ -284,6 +344,7 @@ const Overlay = {
             </svg>
             ${rating}
           </div>
+          ${miniType}
         </div>
         <div class="mr-info">
           <h4 class="mr-title">${this._esc(movie.title)}</h4>
@@ -291,9 +352,10 @@ const Overlay = {
             ${year ? `<span class="mr-year">${year}</span>` : ''}
             ${genreTags}
           </div>
+          ${desc ? `<p class="mr-desc">${this._esc(desc)}</p>` : ''}
           <p class="mr-why">${this._esc(explanation)}</p>
         </div>
-        <button class="mr-save" data-movie-id="${movie.id}" title="Bookmark" aria-label="Bookmark ${this._esc(movie.title)}">
+        <button class="mr-save" data-movie-id="${movie.id}" title="${I18n.t('bookmark')}" aria-label="Bookmark ${this._esc(movie.title)}">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
           </svg>
@@ -305,7 +367,7 @@ const Overlay = {
   _renderLoading() {
     this.container.innerHTML = `
       <div class="mr-panel">
-        ${this._buildHeader('Finding movies...')}
+        ${this._buildHeader(I18n.t('findingMovies'))}
         <div class="mr-cards">
           ${[1,2,3,4].map((_, i) => `
             <div class="mr-card mr-skel" style="--i:${i}">
@@ -338,8 +400,8 @@ const Overlay = {
               </svg>
             </div>
           </div>
-          <p class="mr-empty-title">No recommendations yet</p>
-          <p class="mr-empty-desc">Browse some movies and we'll suggest what to watch next!</p>
+          <p class="mr-empty-title">${I18n.t('noRecsYet')}</p>
+          <p class="mr-empty-desc">${I18n.t('noRecsDesc')}</p>
         </div>
       </div>
     `;
@@ -360,8 +422,8 @@ const Overlay = {
               </svg>
             </div>
           </div>
-          <p class="mr-empty-title">Something went wrong</p>
-          <p class="mr-empty-desc">Check your connection and try again.</p>
+          <p class="mr-empty-title">${I18n.t('somethingWrong')}</p>
+          <p class="mr-empty-desc">${I18n.t('checkConnection')}</p>
         </div>
       </div>
     `;
