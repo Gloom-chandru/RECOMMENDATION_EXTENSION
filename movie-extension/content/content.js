@@ -133,18 +133,35 @@ async function handleMovieDetected(movieTitle) {
       return;
     }
 
-    // Fetch full details to get genre names (searchMovie only returns genre_ids)
+    // Fetch full details, credits, and keywords in parallel for enriched data
     let fullDetails = null;
+    let credits = { directors: [], topCast: [] };
+    let keywords = [];
+
     if (movieData.id) {
-      fullDetails = await API.getMovieDetails(movieData.id);
+      try {
+        const [details, creds, kws] = await Promise.all([
+          API.getMovieDetails(movieData.id),
+          API.getMovieCredits(movieData.id),
+          API.getMovieKeywords(movieData.id)
+        ]);
+        fullDetails = details;
+        credits = creds || credits;
+        keywords = kws || [];
+      } catch (e) {
+        console.warn('[Content] Error fetching enriched data:', e);
+        fullDetails = await API.getMovieDetails(movieData.id);
+      }
     }
 
-    // Add to history with full genre names and language info
+    // Add to history with full genre names, language, directors, and keywords
     const movieWithPlatform = {
       ...movieData,
       genres: fullDetails?.genres || movieData.genres,
       originalLanguage: fullDetails?.originalLanguage || null,
       spokenLanguages: fullDetails?.spokenLanguages || [],
+      directors: credits.directors || [],
+      keywords: keywords,
       platform: PlatformDetectors.getCurrentPlatform()
     };
 

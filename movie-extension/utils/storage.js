@@ -19,7 +19,7 @@ const Storage = {
     enabled: true,
     autoTrack: true,
     showNotifications: true,
-    maxHistoryItems: 20,
+    maxHistoryItems: 50,
     recommendationCount: 6
   },
 
@@ -76,6 +76,8 @@ const Storage = {
         posterPath: movie.posterPath,
         originalLanguage: movie.originalLanguage || null,
         spokenLanguages: Array.isArray(movie.spokenLanguages) ? movie.spokenLanguages : [],
+        directors: Array.isArray(movie.directors) ? movie.directors : [],
+        keywords: Array.isArray(movie.keywords) ? movie.keywords.slice(0, 10) : [],
         timestamp: Date.now(),
         platform: movie.platform || 'unknown',
         rating: movie.rating || 0
