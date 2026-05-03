@@ -212,11 +212,41 @@ async function loadDashboard() {
       const lastMovie = history[0];
       const date = new Date(lastMovie.timestamp);
       const platformIcon = getPlatformIcon(lastMovie.platform);
+
+      // Build genre tags from the movie's genres
+      const genreNames = getGenreNames(lastMovie.genres);
+      const genreTags = genreNames.length > 0
+        ? genreNames.slice(0, 3).map(g => `<span class="current-movie-genre">${escapeHtml(g)}</span>`).join('')
+        : '';
+
+      // Content type badge
+      const contentType = lastMovie.contentType || 'movie';
+      const isAnime = lastMovie.isAnime || false;
+      let typeBadge = '';
+      if (isAnime) {
+        typeBadge = '<span class="content-type-badge anime">Anime</span>';
+      } else if (contentType === 'tv') {
+        typeBadge = '<span class="content-type-badge tv">TV Show</span>';
+      } else {
+        typeBadge = '<span class="content-type-badge movie">Movie</span>';
+      }
+
+      // Language display
+      const langName = getLanguageName(lastMovie.originalLanguage);
+      const langTag = langName ? `<span class="current-movie-lang">${escapeHtml(langName)}</span>` : '';
+
       currentMovieInfo.innerHTML = `
-        <div class="current-movie-title">${escapeHtml(lastMovie.title)}</div>
+        <div class="current-movie-header-row">
+          <div class="current-movie-title">${escapeHtml(lastMovie.title)}</div>
+          ${typeBadge}
+        </div>
         <div class="current-movie-platform">
           ${platformIcon} ${escapeHtml(lastMovie.platform || 'Unknown')} · ${formatDate(date)}
         </div>
+        ${(genreTags || langTag) ? `
+        <div class="current-movie-genres">
+          ${genreTags}${langTag}
+        </div>` : ''}
       `;
     } else {
       currentMovieInfo.innerHTML = '<p class="muted-text">Browse a movie to start tracking</p>';
