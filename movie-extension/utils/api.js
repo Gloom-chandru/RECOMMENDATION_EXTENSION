@@ -1,8 +1,102 @@
 /**
  * TMDb API Module
  * Handles all interactions with The Movie Database API
- * Includes error handling, retries, and caching integration
+ * Includes error handling, retries, rate limiting, and caching integration
  */
+
+/**
+ * RateLimiter — Concurrency-limited request queue with 429 backoff
+ * 
+ * TMDb free tier allows ~40 requests per 10 seconds.
+ * This limiter enforces:
+ *   - Max 4 concurrent in-flight requests
+ *   - 100ms minimum gap between request starts
+ *   - Exponential backoff on 429 (1s → 2s → 4s)
+ */
+const RateLimiter = {
+  MAX_CONCURRENT: 4,
+  MIN_DELAY_MS: 100,        // minimum gap between requests
+  BACKOFF_BASE_MS: 1000,    // initial backoff on 429
+  MAX_BACKOFF_MS: 8000,     // cap backoff at 8 seconds
+
+  _activeCount: 0,
+  _queue: [],
+  _lastRequestTime: 0,
+  _consecutiveRateLimits: 0,
+
+  /**
+   * Enqueue a fetch task. Returns a Promise that resolves
+   * when the task completes (after waiting for a concurrency slot).
+   * @param {Function} fetchFn — async function that performs the actual fetch
+   * @returns {Promise<any>}
+   */
+  enqueue(fetchFn) {
+    return new Promise((resolve, reject) => {
+      this._queue.push({ fetchFn, resolve, reject });
+      this._processQueue();
+    });
+  },
+
+  /**
+   * Process queued tasks up to MAX_CONCURRENT
+   */
+  async _processQueue() {
+    if (this._activeCount >= this.MAX_CONCURRENT || this._queue.length === 0) {
+      return;
+    }
+
+    const { fetchFn, resolve, reject } = this._queue.shift();
+    this._activeCount++;
+
+    try {
+      // Enforce minimum delay between requests
+      const now = Date.now();
+      const elapsed = now - this._lastRequestTime;
+      if (elapsed < this.MIN_DELAY_MS) {
+        await new Promise(r => setTimeout(r, this.MIN_DELAY_MS - elapsed));
+      }
+      this._lastRequestTime = Date.now();
+
+      const result = await fetchFn();
+
+      // Successful request — reset rate limit counter
+      this._consecutiveRateLimits = 0;
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    } finally {
+      this._activeCount--;
+      // Process next item in queue
+      if (this._queue.length > 0) {
+        this._processQueue();
+      }
+    }
+  },
+
+  /**
+   * Calculate backoff delay for 429 responses
+   * Uses exponential backoff with jitter
+   * @returns {number} delay in ms
+   */
+  getBackoffDelay() {
+    this._consecutiveRateLimits++;
+    const baseDelay = this.BACKOFF_BASE_MS * Math.pow(2, this._consecutiveRateLimits - 1);
+    const cappedDelay = Math.min(baseDelay, this.MAX_BACKOFF_MS);
+    // Add ±20% jitter to prevent thundering herd
+    const jitter = cappedDelay * (0.8 + Math.random() * 0.4);
+    return Math.round(jitter);
+  },
+
+  /**
+   * Reset the limiter state (useful for testing or cache clear)
+   */
+  reset() {
+    this._activeCount = 0;
+    this._queue = [];
+    this._lastRequestTime = 0;
+    this._consecutiveRateLimits = 0;
+  }
+};
 
 const API = {
   // Replace with your actual TMDb API key
@@ -13,40 +107,71 @@ const API = {
   
   // Configuration
   TIMEOUT: 10000, // 10 seconds
-  RETRY_ATTEMPTS: 2,
-  RETRY_DELAY: 1000, // 1 second
+  RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000, // 1 second (base delay for non-429 retries)
 
   /**
-   * Generic fetch with error handling and retries
+   * Generic fetch with error handling, rate limiting, and retries
+   * All requests go through RateLimiter to enforce concurrency limits.
+   * 429 responses trigger exponential backoff before retry.
+   * 
+   * @param {string} url — full API URL
+   * @param {number} attempt — current retry attempt (1-indexed)
+   * @returns {Promise<Response>}
    */
   async _fetchWithRetry(url, attempt = 1) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT);
+    return RateLimiter.enqueue(async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.TIMEOUT);
 
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json'
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        clearTimeout(timeoutId);
+
+        // Handle 429 Too Many Requests with exponential backoff
+        if (response.status === 429) {
+          if (attempt < this.RETRY_ATTEMPTS) {
+            // Use Retry-After header if provided, otherwise use backoff
+            const retryAfterHeader = response.headers.get('Retry-After');
+            const backoffDelay = retryAfterHeader
+              ? parseInt(retryAfterHeader, 10) * 1000
+              : RateLimiter.getBackoffDelay();
+
+            console.warn(`[API] Rate limited (429). Backing off ${backoffDelay}ms before retry ${attempt + 1}/${this.RETRY_ATTEMPTS}...`);
+            await new Promise(resolve => setTimeout(resolve, backoffDelay));
+            return this._fetchWithRetry(url, attempt + 1);
+          }
+          throw new Error('API rate limit exceeded — too many requests. Please wait a moment.');
         }
-      });
 
-      clearTimeout(timeoutId);
+        // Handle other HTTP errors
+        if (!response.ok) {
+          throw new Error(`API Error ${response.status}: ${response.statusText}`);
+        }
 
-      if (!response.ok) {
-        throw new Error(`API Error ${response.status}: ${response.statusText}`);
+        return response;
+      } catch (error) {
+        // Retry on network/timeout errors (not on 429, handled above)
+        if (error.name === 'AbortError') {
+          error.message = 'API request timed out';
+        }
+
+        if (attempt < this.RETRY_ATTEMPTS && error.message !== 'API rate limit exceeded — too many requests. Please wait a moment.') {
+          const delay = this.RETRY_DELAY * attempt; // linear backoff for non-429
+          console.warn(`[API] Retry attempt ${attempt + 1}/${this.RETRY_ATTEMPTS} after ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this._fetchWithRetry(url, attempt + 1);
+        }
+
+        throw error;
       }
-
-      return response;
-    } catch (error) {
-      if (attempt < this.RETRY_ATTEMPTS) {
-        console.warn(`[API] Retry attempt ${attempt + 1}...`);
-        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY));
-        return this._fetchWithRetry(url, attempt + 1);
-      }
-
-      throw error;
-    }
+    });
   },
 
   /**
