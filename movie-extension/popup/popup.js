@@ -289,6 +289,53 @@ function animateCounter(elementId, target) {
 }
 
 /**
+ * Map genre data to human-readable names
+ * Handles both {id, name} objects and raw genre IDs
+ * @param {Array} genres
+ * @returns {string[]}
+ */
+function getGenreNames(genres) {
+  if (!genres || !Array.isArray(genres)) return [];
+
+  const genreIdMap = {
+    28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy',
+    80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family',
+    14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music',
+    9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi', 10770: 'TV Movie',
+    53: 'Thriller', 10752: 'War', 37: 'Western'
+  };
+
+  return genres.map(g => {
+    if (typeof g === 'object' && g.name) return g.name;
+    if (typeof g === 'number') return genreIdMap[g] || null;
+    if (typeof g === 'string') return g;
+    return null;
+  }).filter(Boolean);
+}
+
+/**
+ * Get human-readable language name from ISO 639-1 code
+ * @param {string} langCode
+ * @returns {string|null}
+ */
+function getLanguageName(langCode) {
+  if (!langCode) return null;
+  const names = {
+    'en': 'English', 'hi': 'Hindi', 'te': 'Telugu', 'ta': 'Tamil',
+    'kn': 'Kannada', 'ml': 'Malayalam', 'bn': 'Bengali', 'mr': 'Marathi',
+    'gu': 'Gujarati', 'pa': 'Punjabi', 'es': 'Spanish', 'fr': 'French',
+    'de': 'German', 'it': 'Italian', 'pt': 'Portuguese', 'ja': 'Japanese',
+    'ko': 'Korean', 'zh': 'Chinese', 'ru': 'Russian', 'ar': 'Arabic',
+    'tr': 'Turkish', 'th': 'Thai', 'vi': 'Vietnamese', 'id': 'Indonesian',
+    'sv': 'Swedish', 'pl': 'Polish', 'nl': 'Dutch', 'da': 'Danish',
+    'no': 'Norwegian', 'fi': 'Finnish', 'uk': 'Ukrainian', 'ro': 'Romanian',
+    'cs': 'Czech', 'hu': 'Hungarian', 'el': 'Greek', 'he': 'Hebrew',
+    'fa': 'Persian', 'ur': 'Urdu', 'ms': 'Malay', 'tl': 'Tagalog'
+  };
+  return names[langCode] || null;
+}
+
+/**
  * Get platform emoji icon
  * @param {string} platform
  * @returns {string}
